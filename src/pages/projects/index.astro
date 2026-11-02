@@ -1,0 +1,51 @@
+---
+import { getCollection } from 'astro:content';
+import PortfolioLayout from '../../layouts/PortfolioLayout.astro';
+import ProjectCard from '../../components/ProjectCard.astro';
+import { getPublishedProjects } from '../../lib/projects';
+import { sitePath } from '../../lib/urls';
+
+const siteEntries = await getCollection('site');
+const profile = siteEntries.find((entry) => entry.data.kind === 'profile')?.data;
+if (!profile || profile.kind !== 'profile') throw new Error('Profil situs tidak ditemukan.');
+const projects = await getPublishedProjects();
+const categories = [...new Set(projects.map((project) => project.data.category))].sort((a, b) => a.localeCompare(b));
+const categoryCounts = new Map(categories.map((category) => [category, projects.filter((project) => project.data.category === category).length]));
+const navItems = [
+  { label: 'Tentang', href: sitePath('/#about') },
+  { label: 'Proyek', href: sitePath('/projects/'), current: true },
+  { label: 'Kontak', href: sitePath('/#contact') },
+];
+---
+
+<PortfolioLayout
+  title={`Arsip Proyek — ${profile.name}`}
+  description={`Arsip ${projects.length} repositori publik yang dipilih, dengan kategori, ringkasan, dan tautan dokumentasi.`}
+  canonicalPath="/projects/"
+  navItems={navItems}
+>
+  <section class="archive-intro content-shell" aria-labelledby="archive-title">
+    <a class="back-link" href={sitePath('/#projects')}>← Kembali ke beranda</a>
+    <h1 id="archive-title">Repositori publik</h1>
+    <p class="archive-intro__summary">Setiap entri merangkum informasi di repositori publik dan menyediakan tautan untuk memeriksa sumbernya.</p>
+    <p class="archive-count" data-project-count aria-live="polite">{projects.length} proyek ditampilkan</p>
+  </section>
+  <div class="filter-wrap content-shell">
+    <div class="filter-bar" data-project-filters role="group" aria-label="Filter proyek menurut kategori" hidden>
+      <button type="button" class="filter-chip" data-category-filter="all" aria-pressed="true">Semua <span>{projects.length}</span></button>
+      {categories.map((category) => (
+        <button type="button" class="filter-chip" data-category-filter={category} aria-pressed="false">{category} <span>{categoryCounts.get(category)}</span></button>
+      ))}
+    </div>
+  </div>
+  <section class="archive-list content-shell" aria-labelledby="archive-list-heading">
+    <h2 class="visually-hidden" id="archive-list-heading">Semua proyek yang dipublikasikan</h2>
+    {projects.length > 0 ? (
+      <div class="project-grid">
+        {projects.map((project) => <ProjectCard project={project} />)}
+      </div>
+    ) : (
+      <p class="empty-note">Belum ada proyek terbit.</p>
+    )}
+  </section>
+</PortfolioLayout>

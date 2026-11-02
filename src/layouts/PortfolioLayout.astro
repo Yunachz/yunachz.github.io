@@ -1,0 +1,104 @@
+---
+import '../styles/global.css';
+import { getCollection } from 'astro:content';
+import { sitePath } from '../lib/urls';
+
+interface Props {
+  title: string;
+  description: string;
+  canonicalPath?: string;
+  navItems?: Array<{ label: string; href: string; current?: boolean }>;
+}
+
+const { title, description, canonicalPath = '/', navItems = [] } = Astro.props;
+const siteEntries = await getCollection('site');
+const profile = siteEntries.find((entry) => entry.data.kind === 'profile')?.data;
+const contact = siteEntries.find((entry) => entry.data.kind === 'contact')?.data;
+const settings = siteEntries.find((entry) => entry.data.kind === 'settings')?.data;
+if (!profile || profile.kind !== 'profile' || !contact || contact.kind !== 'contact' || !settings || settings.kind !== 'settings') {
+  throw new Error('Konten site/profile.json, contact.json, dan settings.json wajib tersedia.');
+}
+const canonical = new URL(sitePath(canonicalPath), settings.siteUrl).href;
+const personData = {
+  '@context': 'https://schema.org',
+  '@type': 'Person',
+  name: profile.name,
+  url: settings.siteUrl,
+  sameAs: [contact.github],
+};
+---
+
+<!doctype html>
+<html lang={settings.locale}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#F8FAFC" />
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <link rel="icon" type="image/svg+xml" href={sitePath('/favicon.svg')} />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="id_ID" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta name="twitter:card" content="summary" />
+    <title>{title}</title>
+    <script is:inline>
+      (() => {
+        const root = document.documentElement;
+        let mode = 'system';
+        try {
+          const saved = localStorage.getItem('portfolio-theme');
+          if (saved === 'light' || saved === 'dark') mode = saved;
+        } catch {}
+        const preference = window.matchMedia('(prefers-color-scheme: dark)');
+        root.dataset.themeMode = mode;
+        root.dataset.theme = mode === 'system' ? (preference.matches ? 'dark' : 'light') : mode;
+        root.classList.add('js');
+      })();
+    </script>
+    <script type="application/ld+json" set:html={JSON.stringify(personData)}></script>
+  </head>
+  <body>
+    <a class="skip-link" href={sitePath('/#main-content')}>Lewati ke konten utama</a>
+    <header class="site-header">
+      <div class="site-header__inner">
+        <a class="site-brand" href={sitePath('/')} aria-label={`${profile.name}, beranda`}>
+          <span class="site-brand__mark" aria-hidden="true">MFS</span>
+          <span class="site-brand__text"><strong>{profile.name}</strong><span>{profile.field}</span></span>
+        </a>
+        <button class="menu-toggle" id="menu-toggle" type="button" aria-expanded="false" aria-controls="primary-navigation" hidden>
+          <span class="menu-toggle__bars" aria-hidden="true"></span>
+          <span class="menu-toggle__label">Menu</span>
+        </button>
+        <nav class="primary-navigation" id="primary-navigation" aria-label="Navigasi utama">
+          <ul>
+            {navItems.map((item) => (
+              <li><a href={item.href} aria-current={item.current ? 'page' : undefined}>{item.label}</a></li>
+            ))}
+          </ul>
+        </nav>
+        <label class="theme-control" data-theme-control hidden>
+          <span>Tema</span>
+          <select id="theme-mode" aria-label="Pilih tema warna">
+            <option value="system">Sistem</option>
+            <option value="light">Terang</option>
+            <option value="dark">Gelap</option>
+          </select>
+        </label>
+      </div>
+    </header>
+    <main id="main-content" tabindex="-1"><slot /></main>
+    <footer class="site-footer">
+      <div class="site-footer__inner">
+        <span>{profile.name} · {profile.field}</span>
+        <a href={contact.github} target="_blank" rel="noopener noreferrer">GitHub <span aria-hidden="true">↗</span></a>
+      </div>
+    </footer>
+    <script>
+      import '../scripts/site-ui';
+    </script>
+  </body>
+</html>

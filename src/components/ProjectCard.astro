@@ -1,0 +1,36 @@
+---
+import type { ProjectEntry } from '../lib/projects';
+import { sitePath } from '../lib/urls';
+
+interface Props {
+  project: ProjectEntry;
+}
+
+const { project } = Astro.props;
+const { slug, title, summary, category, tags, repositoryUrl, cover, alt, coverWidth, coverHeight, sourceLinks } = project.data;
+const coverSource = sourceLinks.find((source) => source.label === 'Foto prototipe');
+---
+
+<article class="project-card" data-project-card data-category={category}>
+  {cover && (
+    <figure class="project-card__media">
+      <a href={sitePath(`/projects/${slug}/`)}>
+        <img src={sitePath(cover)} alt={alt ?? ''} width={coverWidth} height={coverHeight} loading="lazy" decoding="async" />
+      </a>
+      <figcaption>
+        <span>Foto dokumentasi repositori publik</span>
+        {coverSource && <a href={coverSource.url} target="_blank" rel="noopener noreferrer">Sumber gambar</a>}
+      </figcaption>
+    </figure>
+  )}
+  <h3><a class="project-card__title" href={sitePath(`/projects/${slug}/`)}>{title}</a></h3>
+  <p class="project-card__category">{category}</p>
+  <p class="project-card__summary">{summary}</p>
+  <ul class="tag-list" aria-label={`Teknologi yang disebut di dokumentasi ${title}`}>
+    {tags.map((tag) => <li>{tag}</li>)}
+  </ul>
+  <div class="project-card__links">
+    <a class="text-link" href={sitePath(`/projects/${slug}/`)}>Baca ringkasan <span aria-hidden="true">↗</span></a>
+    {repositoryUrl && <a class="quiet-link" href={repositoryUrl} target="_blank" rel="noopener noreferrer">Buka repositori <span aria-hidden="true">↗</span></a>}
+  </div>
+</article>
