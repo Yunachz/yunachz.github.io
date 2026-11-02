@@ -1,0 +1,15 @@
+{
+  "category": "Organisasi",
+  "organization": "KSM IOT 2025",
+  "role": "Staff Firmware Division",
+  "summary": "Pembelajaran firmware dan komunikasi mikrokontroler.",
+  "details": [
+    "Belajar bahasa pemrograman Python.",
+    "Mempelajari protokol komunikasi pada mikrokontroler.",
+    "Belajar machine learning."
+  ],
+  "period": "Feb 2026 – Berjalan",
+  "sourcePages": [2],
+  "order": 30,
+  "draft": false
+}

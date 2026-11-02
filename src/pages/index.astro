@@ -2,84 +2,114 @@
 import { getCollection, render } from 'astro:content';
 import PortfolioLayout from '../layouts/PortfolioLayout.astro';
 import ProjectCard from '../components/ProjectCard.astro';
-import { getFeaturedProjects, getPublishedProjects, sortProjects } from '../lib/projects';
+import RecordCard from '../components/RecordCard.astro';
+import { getFeaturedProjects, getPublishedProjects, groupByCategory, sortProjects } from '../lib/projects';
 import { sitePath } from '../lib/urls';
 
 const siteEntries = await getCollection('site');
 const profile = siteEntries.find((entry) => entry.data.kind === 'profile')?.data;
 const contact = siteEntries.find((entry) => entry.data.kind === 'contact')?.data;
 const settings = siteEntries.find((entry) => entry.data.kind === 'settings')?.data;
-if (!profile || profile.kind !== 'profile' || !contact || contact.kind !== 'contact' || !settings || settings.kind !== 'settings') throw new Error('Profil, pengaturan, dan tautan GitHub diperlukan.');
+if (!profile || profile.kind !== 'profile' || !contact || contact.kind !== 'contact' || !settings || settings.kind !== 'settings') {
+  throw new Error('Profil, pengaturan, dan tautan kontak diperlukan.');
+}
 
 const projects = await getPublishedProjects();
 const featured = await getFeaturedProjects(settings.featuredLimit);
-const heroVisualProject = featured.find((project) => Boolean(project.data.cover));
-const heroVisualSource = heroVisualProject?.data.sourceLinks.find((source) => source.label === 'Foto prototipe');
-const categories = [...new Set(projects.map((project) => project.data.category))].sort((a, b) => a.localeCompare(b));
+const projectCategories = [...new Set(projects.map((project) => project.data.category))].sort((a, b) => a.localeCompare(b));
 const skills = sortProjects((await getCollection('skills')).filter((entry) => !entry.data.draft));
-const experience = sortProjects((await getCollection('experience')).filter((entry) => !entry.data.draft));
+const experiences = sortProjects((await getCollection('experience')).filter((entry) => !entry.data.draft));
 const education = sortProjects((await getCollection('education')).filter((entry) => !entry.data.draft));
 const credentials = sortProjects((await getCollection('credentials')).filter((entry) => !entry.data.draft));
 const sections = sortProjects((await getCollection('sections')).filter((entry) => !entry.data.draft));
+const skillGroups = groupByCategory(skills);
+const experienceGroups = groupByCategory(experiences);
+const educationGroups = groupByCategory(education);
+const credentialGroups = groupByCategory(credentials);
 const renderedSections = await Promise.all(sections.map(async (entry) => ({ entry, content: await render(entry) })));
+const gpa = profile.gpa?.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const cvHref = profile.cv
+  ? (profile.cv.startsWith('https://') ? profile.cv : sitePath(profile.cv))
+  : undefined;
 
 const navItems = [
   { label: 'Tentang', href: '#about' },
   { label: 'Proyek', href: '#projects' },
   ...(skills.length ? [{ label: 'Keahlian', href: '#skills' }] : []),
-  ...(experience.length ? [{ label: 'Pengalaman', href: '#experience' }] : []),
+  ...(experiences.length ? [{ label: 'Pengalaman', href: '#experience' }] : []),
   ...(education.length ? [{ label: 'Pendidikan', href: '#education' }] : []),
-  ...(credentials.length ? [{ label: 'Kredensial', href: '#credentials' }] : []),
+  ...(credentials.length ? [{ label: 'Sertifikasi', href: '#credentials' }] : []),
   { label: 'Kontak', href: '#contact' },
 ];
-const cvHref = profile.kind === 'profile' && profile.cv
-  ? (profile.cv.startsWith('https://') ? profile.cv : sitePath(profile.cv))
-  : undefined;
 ---
 
 <PortfolioLayout
-  title={`${profile.name} — ${profile.field}`}
-  description="Pilihan dokumentasi repositori publik tentang sistem sensor, embedded, kendali, telemetri, dan perangkat lunak."
+  title={profile.name + ' — ' + profile.field}
+  description="Profil, pengalaman, pendidikan, sertifikasi, dan dokumentasi proyek publik Muhammad Fajar Sodik."
   canonicalPath="/"
   navItems={navItems}
 >
-  <section class="hero content-shell" id="about" aria-labelledby="page-title">
+  <section class="hero content-shell" aria-labelledby="page-title">
     <div class="hero__copy">
+      {profile.location && <p class="hero__location">{profile.location}</p>}
       <h1 id="page-title">{profile.name}</h1>
-      <p class="hero__field">{profile.field}</p>
-      <p class="hero__intro">{profile.summary ?? 'Portofolio ini merangkum dokumentasi dari repositori publik yang relevan dengan sistem sensor, embedded, kendali, telemetri, dan perangkat lunak.'}</p>
+      <p class="hero__field">Mahasiswa Teknik Elektro · UPN Veteran Jakarta</p>
+      {profile.summary && <p class="hero__intro">{profile.summary}</p>}
+      {gpa && <p class="hero__gpa"><span>GPA</span><strong>{gpa}</strong></p>}
       <div class="hero__actions">
-        <a class="button button--primary" href="#projects">Lihat proyek pilihan <span aria-hidden="true">↓</span></a>
-        <a class="button button--quiet" href={contact.github} target="_blank" rel="noopener noreferrer">Profil GitHub <span aria-hidden="true">↗</span></a>
-        {cvHref && <a class="button button--quiet" href={cvHref} target={profile.cv?.startsWith('https://') ? '_blank' : undefined} rel={profile.cv?.startsWith('https://') ? 'noopener noreferrer' : undefined}>{profile.cvLabel ?? 'Lihat CV'} <span aria-hidden="true">↗</span></a>}
+        {cvHref && (
+          <a class="button button--primary" href={cvHref} data-cv-dialog data-cv-name={profile.name}
+            target="_blank" rel="noopener noreferrer">
+            Lihat CV (PDF) <span aria-hidden="true">↗</span>
+          </a>
+        )}
+        <a class="button button--quiet" href="#projects">Lihat proyek <span aria-hidden="true">↓</span></a>
       </div>
     </div>
-    <aside class="hero-panel" aria-label="Dokumentasi proyek publik">
-      {heroVisualProject?.data.cover && (
-        <figure class="hero-panel__figure">
-          <a href={sitePath(`/projects/${heroVisualProject.data.slug}/`)}>
-            <img src={sitePath(heroVisualProject.data.cover)} alt={heroVisualProject.data.alt ?? ''} width={heroVisualProject.data.coverWidth} height={heroVisualProject.data.coverHeight} loading="eager" decoding="async" fetchpriority="high" />
-          </a>
-          <figcaption class="hero-panel__caption">
-            <div>
-              <p>Foto dokumentasi repositori publik</p>
-              <a href={sitePath(`/projects/${heroVisualProject.data.slug}/`)}>{heroVisualProject.data.title}</a>
-            </div>
-            {heroVisualSource && <a href={heroVisualSource.url} target="_blank" rel="noopener noreferrer">Sumber foto</a>}
-          </figcaption>
-        </figure>
+    <figure class="hero-portrait">
+      {profile.photo && (
+        <img
+          src={sitePath(profile.photo)}
+          alt={profile.photoAlt ?? ''}
+          width={profile.photoWidth}
+          height={profile.photoHeight}
+          loading="eager"
+          decoding="async"
+          fetchpriority="high"
+        />
       )}
-      <p class="hero-panel__detail">{projects.length} repositori publik dalam {categories.length} kategori.</p>
-      <a class="hero-panel__link" href={sitePath('/projects/')}>Jelajahi arsip lengkap <span aria-hidden="true">↗</span></a>
-    </aside>
+      <figcaption>
+        <span>{profile.name}</span>
+        <span>{profile.field}</span>
+      </figcaption>
+    </figure>
   </section>
 
-  <section class="section-block content-shell" id="projects" aria-labelledby="projects-heading">
+  {renderedSections.map(({ entry, content }) => {
+    const { Content } = content;
+    return (
+      <section class="section-block content-shell about-section" id={entry.data.slug} aria-labelledby={entry.data.slug + '-heading'}>
+        <div class="about-section__label">
+          <h2 id={entry.data.slug + '-heading'}>{entry.data.title}</h2>
+        </div>
+        <div class="about-section__body">
+          <div class="prose"><Content /></div>
+          <dl class="profile-facts">
+            {profile.location && <div><dt>Lokasi</dt><dd>{profile.location}</dd></div>}
+            {gpa && <div><dt>GPA</dt><dd>{gpa}</dd></div>}
+            {profile.languages.map((language) => <div><dt>{language.name}</dt><dd>{language.level}</dd></div>)}
+          </dl>
+        </div>
+      </section>
+    );
+  })}
+
+  <section class="section-block content-shell project-section" id="projects" aria-labelledby="projects-heading">
     <div class="section-heading">
       <div>
         <h2 id="projects-heading">Proyek pilihan</h2>
       </div>
-      <a class="text-link section-heading__link" href={sitePath('/projects/')}>Arsip lengkap <span aria-hidden="true">↗</span></a>
+      <a class="text-link section-heading__link" href={sitePath('/projects/')}>Lihat seluruh {projects.length} proyek <span aria-hidden="true">↗</span></a>
     </div>
     {featured.length > 0 ? (
       <div class="project-grid project-grid--featured">
@@ -88,68 +118,95 @@ const cvHref = profile.kind === 'profile' && profile.cv
     ) : (
       <p class="empty-note">Belum ada proyek pilihan yang ditandai.</p>
     )}
+    <div class="project-category-note">
+      {projectCategories.map((category, index) => (
+        <span>{index > 0 ? ' · ' : ''}{category}</span>
+      ))}
+    </div>
   </section>
 
-  {skills.length > 0 && (
-    <section class="section-block content-shell" id="skills" aria-labelledby="skills-heading">
-      <div class="section-heading"><div><h2 id="skills-heading">Keahlian</h2></div></div>
-      <div class="simple-grid">
-        {skills.map((skill) => (
-          <article class="simple-card"><h3>{skill.data.name}</h3><p class="category-label">{skill.data.category}</p>{skill.data.context && <p>{skill.data.context}</p>}</article>
+  {skillGroups.length > 0 && (
+    <section class="section-block content-shell skills-section" id="skills" aria-labelledby="skills-heading">
+      <div class="section-heading">
+        <div><h2 id="skills-heading">Keahlian dan pembelajaran</h2></div>
+      </div>
+      <div class="skill-groups">
+        {skillGroups.map((group) => (
+          <section class="skill-group" aria-labelledby={'skills-' + group.category.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}>
+            <h3 id={'skills-' + group.category.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}>{group.category}</h3>
+            <div class="skill-list">
+              {group.items.map((skill) => (
+                <article class="skill-item">
+                  <h4>{skill.data.name}</h4>
+                  {skill.data.context && <p>{skill.data.context}</p>}
+                </article>
+              ))}
+            </div>
+          </section>
         ))}
       </div>
     </section>
   )}
 
-  {experience.length > 0 && (
-    <section class="section-block content-shell" id="experience" aria-labelledby="experience-heading">
-      <div class="section-heading"><div><h2 id="experience-heading">Pengalaman</h2></div></div>
-      <div class="simple-grid">
-        {experience.map((entry) => (
-          <article class="simple-card"><h3>{entry.data.role}</h3><p class="category-label">{entry.data.period ?? 'Pengalaman'}</p><p class="simple-card__meta">{entry.data.organization}</p><p>{entry.data.summary}</p></article>
-        ))}
+  {experienceGroups.length > 0 && (
+    <section class="section-block content-shell timeline-section" id="experience" aria-labelledby="experience-heading">
+      <div class="section-heading">
+        <div><h2 id="experience-heading">Pengalaman</h2></div>
       </div>
+      {experienceGroups.map((group) => (
+        <section class="record-group" aria-labelledby={'experience-' + group.category.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}>
+          <div class="record-group__label">
+            <h3 id={'experience-' + group.category.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}>{group.category}</h3>
+          </div>
+          <div class="record-grid">
+            {group.items.map((entry) => <RecordCard entry={entry} kind="experience" />)}
+          </div>
+        </section>
+      ))}
     </section>
   )}
 
-  {education.length > 0 && (
-    <section class="section-block content-shell" id="education" aria-labelledby="education-heading">
-      <div class="section-heading"><div><h2 id="education-heading">Pendidikan</h2></div></div>
-      <div class="simple-grid">
-        {education.map((entry) => (
-          <article class="simple-card"><h3>{entry.data.program}</h3><p class="category-label">{entry.data.period ?? 'Pendidikan'}</p><p class="simple-card__meta">{entry.data.institution}</p>{entry.data.summary && <p>{entry.data.summary}</p>}</article>
-        ))}
+  {educationGroups.length > 0 && (
+    <section class="section-block content-shell education-section" id="education" aria-labelledby="education-heading">
+      <div class="section-heading">
+        <div><h2 id="education-heading">Pendidikan</h2></div>
       </div>
+      {educationGroups.map((group) => (
+        <section class="record-group" aria-labelledby={'education-' + group.category.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}>
+          <div class="record-group__label"><h3 id={'education-' + group.category.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}>{group.category}</h3></div>
+          <div class="record-grid record-grid--education">
+            {group.items.map((entry) => <RecordCard entry={entry} kind="education" />)}
+          </div>
+        </section>
+      ))}
     </section>
   )}
 
-  {credentials.length > 0 && (
-    <section class="section-block content-shell" id="credentials" aria-labelledby="credentials-heading">
-      <div class="section-heading"><div><h2 id="credentials-heading">Kredensial</h2></div></div>
-      <div class="simple-grid">
-        {credentials.map((entry) => (
-          <article class="simple-card"><h3>{entry.data.name}</h3><p class="category-label">{entry.data.issuedAt ?? entry.data.issuer}</p>{entry.data.verifyUrl && <a class="text-link" href={entry.data.verifyUrl} target="_blank" rel="noopener noreferrer">Verifikasi <span aria-hidden="true">↗</span></a>}</article>
-        ))}
+  {credentialGroups.length > 0 && (
+    <section class="section-block content-shell credential-section" id="credentials" aria-labelledby="credentials-heading">
+      <div class="section-heading">
+        <div><h2 id="credentials-heading">Sertifikasi dan pelatihan</h2></div>
       </div>
+      {credentialGroups.map((group) => (
+        <section class="credential-group" aria-label={group.category}>
+          <div class="credential-grid">
+            {group.items.map((entry) => <RecordCard entry={entry} kind="credential" />)}
+          </div>
+        </section>
+      ))}
     </section>
   )}
-
-  {renderedSections.map(({ entry, content }) => {
-    const { Content } = content;
-    return (
-      <section class="section-block content-shell content-section" id={entry.data.slug} aria-labelledby={`${entry.data.slug}-heading`}>
-        <div class="section-heading"><div><h2 id={`${entry.data.slug}-heading`}>{entry.data.title}</h2></div></div>
-        <div class="prose"><Content /></div>
-      </section>
-    );
-  })}
 
   <section class="contact-block content-shell" id="contact" aria-labelledby="contact-heading">
-    <div><h2 id="contact-heading">Terhubung lewat GitHub</h2></div>
-    <div class="hero__actions contact-actions">
-      <a class="button button--primary" href={contact.github} target="_blank" rel="noopener noreferrer">Buka profil Yunachz <span aria-hidden="true">↗</span></a>
-      {contact.email && <a class="button button--quiet" href={`mailto:${contact.email}`}>Email <span aria-hidden="true">↗</span></a>}
-      {contact.linkedin && <a class="button button--quiet" href={contact.linkedin} target="_blank" rel="noopener noreferrer">LinkedIn <span aria-hidden="true">↗</span></a>}
+    <div class="contact-block__intro">
+      <h2 id="contact-heading">Mari bicarakan proyek Anda.</h2>
+      <p>Terbuka untuk percakapan tentang pekerjaan dan kolaborasi di bidang teknik elektro.</p>
     </div>
+    <ul class="contact-actions" aria-label="Cara menghubungi Muhammad Fajar Sodik">
+      {contact.linkedin && <li><a class="button button--primary" href={contact.linkedin} target="_blank" rel="noopener noreferrer">LinkedIn <span aria-hidden="true">↗</span></a></li>}
+      <li><a class="button button--quiet" href={contact.github} target="_blank" rel="noopener noreferrer">GitHub <span aria-hidden="true">↗</span></a></li>
+      {contact.whatsapp && <li><a class="button button--quiet" href={contact.whatsapp} target="_blank" rel="noopener noreferrer">WhatsApp <span aria-hidden="true">↗</span></a></li>}
+      {contact.email && <li><a class="button button--quiet" href={'mailto:' + contact.email + '?subject=' + encodeURIComponent('Penawaran proyek')}>Email <span aria-hidden="true">↗</span></a></li>}
+    </ul>
   </section>
 </PortfolioLayout>

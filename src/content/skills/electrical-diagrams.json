@@ -1,0 +1,8 @@
+{
+  "name": "Membaca dan menggambar diagram listrik",
+  "category": "Kelistrikan",
+  "context": "Membaca wiring diagram dan menggambar electrical diagram.",
+  "sourcePages": [1, 3],
+  "order": 20,
+  "draft": false
+}

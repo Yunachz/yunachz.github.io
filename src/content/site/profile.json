@@ -1,5 +1,18 @@
 {
   "kind": "profile",
   "name": "Muhammad Fajar Sodik",
-  "field": "Electrical Engineering"
+  "field": "Electrical Engineering",
+  "location": "Jakarta, Indonesia",
+  "summary": "Mahasiswa S1 Teknik Elektro Universitas Pembangunan Nasional Veteran Jakarta dengan pengalaman OJT di Engineering Department ASTON Kemayoran City Hotel. Memiliki kemampuan instalasi penerangan dan motor listrik, pemrograman PLC, serta membaca diagram pengawatan; berminat berkarier di bidang electrical engineering.",
+  "gpa": 3.72,
+  "languages": [
+    { "name": "Bahasa Indonesia", "level": "Native" },
+    { "name": "Bahasa Inggris", "level": "Basic" }
+  ],
+  "photo": "assets/profile/muhammad-fajar-sodik.webp",
+  "photoAlt": "Muhammad Fajar Sodik mengenakan seragam biru di luar ruangan",
+  "photoWidth": 853,
+  "photoHeight": 1600,
+  "cv": "assets/documents/cv-muhammad-fajar-sodik.pdf",
+  "cvLabel": "Lihat CV (PDF)"
 }

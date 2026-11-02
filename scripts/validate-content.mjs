@@ -2,11 +2,11 @@ import { readdir, readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import matter from 'gray-matter';
-import { validateProjectSet } from './content-validation.mjs';
+import { validatePortfolioRecords, validateProjectSet } from './content-validation.mjs';
 
 const projectDir = path.resolve('src/content/projects');
 const publicDir = path.resolve('public');
-const reservedSectionIds = new Set(['about', 'projects', 'skills', 'experience', 'education', 'credentials', 'contact', 'main-content']);
+const reservedSectionIds = new Set(['projects', 'skills', 'experience', 'education', 'credentials', 'contact', 'main-content']);
 
 async function filesWithExtension(directory, extension) {
   try {
@@ -67,6 +67,11 @@ async function main() {
   await validateOptionalAsset(profile.cv, 'assets/documents/', 'site/profile.json cv', true);
 
   const skills = await readJsonCollection('skills');
+  const experience = await readJsonCollection('experience');
+  const education = await readJsonCollection('education');
+  const credentials = await readJsonCollection('credentials');
+  const profileCounts = validatePortfolioRecords({ profile, contact, skills, experience, education, credentials });
+
   for (const { source, data } of skills) {
     if (data.draft !== false) continue;
     for (const slug of data.projectSlugs ?? []) {
@@ -74,12 +79,13 @@ async function main() {
     }
   }
 
-  const credentials = await readJsonCollection('credentials');
   for (const { source, data } of credentials) {
     await validateOptionalAsset(data.document, 'assets/documents/', `${source} document`, true);
+    await validateOptionalAsset(data.image, 'assets/certificates/', `${source} image`);
   }
 
   console.log(`Konten proyek valid: ${projects.length} entry (${projects.filter((project) => !project.draft).length} terbit, ${projects.filter((project) => project.draft).length} draft).`);
+  console.log(`Konten CV valid: ${profileCounts.skills} skill, ${profileCounts.experience} pengalaman, ${profileCounts.education} pendidikan/pelatihan, ${profileCounts.credentials} sertifikasi terbit.`);
 }
 
 main().catch((error) => {

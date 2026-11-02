@@ -1,8 +1,8 @@
 # Portfolio Muhammad Fajar Sodik
 
-Portfolio Astro statis untuk `https://yunachz.github.io/`. Konten proyek, profil, serta daftar lain berada di Content Collections, terpisah dari template. HTML utama sudah dirender saat build; JavaScript hanya menambah kontrol tema, menu mobile, dan filter arsip.
+Portfolio Astro statis untuk `https://yunachz.github.io/`. Konten proyek, profil, serta daftar lain berada di Content Collections, terpisah dari template. HTML utama sudah dirender saat build; JavaScript menambah kontrol tema, menu mobile, filter arsip, dan dialog detail dengan tautan/rute HTML sebagai fallback.
 
-Empat foto perangkat diproses menjadi WebP lokal dari file yang sama di repositori publik masing-masing, disertai alt text dan tautan sumber. Portfolio tidak membuat potret, CV, email, riwayat, atau hasil ukur yang belum diberikan.
+Empat foto perangkat diproses menjadi WebP lokal dari file yang sama di repositori publik masing-masing, disertai alt text dan tautan sumber. Portrait dan CV berasal dari aset yang diberikan untuk portfolio. Portfolio tidak membuat riwayat, penerbit/tanggal sertifikat, atau hasil ukur yang belum diberikan.
 
 ## Menjalankan lokal
 

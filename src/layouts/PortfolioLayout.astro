@@ -26,6 +26,9 @@ const personData = {
   url: settings.siteUrl,
   sameAs: [contact.github],
 };
+const cvHref = profile.cv
+  ? (profile.cv.startsWith('https://') ? profile.cv : sitePath(profile.cv))
+  : undefined;
 ---
 
 <!doctype html>
@@ -62,7 +65,7 @@ const personData = {
     <script type="application/ld+json" set:html={JSON.stringify(personData)}></script>
   </head>
   <body>
-    <a class="skip-link" href={sitePath('/#main-content')}>Lewati ke konten utama</a>
+    <a class="skip-link" href="#main-content">Lewati ke konten utama</a>
     <header class="site-header">
       <div class="site-header__inner">
         <a class="site-brand" href={sitePath('/')} aria-label={`${profile.name}, beranda`}>
@@ -88,6 +91,16 @@ const personData = {
             <option value="dark">Gelap</option>
           </select>
         </label>
+        {cvHref && (
+          <a
+            class="header-cv button button--quiet"
+            href={cvHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            data-cv-dialog
+            data-cv-name={profile.name}
+          >{profile.cvLabel ?? 'Lihat CV'} <span aria-hidden="true">↗</span></a>
+        )}
       </div>
     </header>
     <main id="main-content" tabindex="-1"><slot /></main>
@@ -97,6 +110,12 @@ const personData = {
         <a href={contact.github} target="_blank" rel="noopener noreferrer">GitHub <span aria-hidden="true">↗</span></a>
       </div>
     </footer>
+    <dialog class="site-dialog" id="content-dialog" aria-modal="true" aria-labelledby="dialog-title">
+      <div class="site-dialog__toolbar">
+        <button class="dialog-close" type="button" data-dialog-close aria-label="Tutup dialog">Tutup <span aria-hidden="true">×</span></button>
+      </div>
+      <div class="site-dialog__content" data-dialog-content></div>
+    </dialog>
     <script>
       import '../scripts/site-ui';
     </script>

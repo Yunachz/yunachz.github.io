@@ -61,17 +61,17 @@ Schema Astro di `src/content.config.ts` memeriksa struktur/type Markdown dan JSO
 
 ## Mengelola bagian profil lain
 
-- `src/content/site/profile.json` menyimpan nama dan bidang yang terkonfirmasi. `summary`, `photo`, `photoAlt`, `cv`, dan `cvLabel` opsional. Foto lokal berada di `public/assets/profile/` dan memerlukan alt; CV lokal berada di `public/assets/documents/`, atau bisa memakai URL HTTPS.
-- `src/content/site/contact.json` memiliki GitHub sebagai tautan utama; `email` dan `linkedin` opsional. Tombol untuk kanal opsional tidak dirender jika nilainya kosong.
+- `src/content/site/profile.json` menyimpan nama, bidang, lokasi, ringkasan, GPA, bahasa, portrait, dan CV. `gpa` adalah angka tanpa skala implisit; jangan menambah penyebut atau semester. Portrait lokal berada di `public/assets/profile/` dan memerlukan `photoAlt`, `photoWidth`, serta `photoHeight`. CV lokal berada di `public/assets/documents/`: kontrol membuka dialog pratinjau dan menawarkan buka tab baru/unduh; `href` PDF tetap menjadi fallback saat JavaScript mati.
+- `src/content/site/contact.json` mendukung `github`, `linkedin`, `whatsapp`, `phone` E.164, dan `email`. Tautan tindakan dirender hanya bila kanal berisi data; CTA email menambahkan subjek tawaran proyek yang di-encode.
 - `src/content/site/settings.json` menyimpan `locale`, URL situs, dan `featuredLimit` (default 6, maksimal 6).
 - Section naratif generik adalah satu file Markdown per entri di `src/content/sections/` dengan `title`, `slug`, `order`, dan `draft`. Konten yang terbit dirender oleh template section yang sama di beranda; slug harus unik dan tidak sama dengan anchor halaman.
-- Item keahlian berada di `src/content/skills/*.json`: `name`, `category`, `context` (opsional), `projectSlugs` (opsional), `order` (default `100`), `draft` (default `true`). Item terbit hanya boleh menunjuk proyek yang juga terbit.
-- Item pengalaman di `src/content/experience/*.json` memerlukan `organization`, `role`, `summary`; `period` opsional.
-- Item pendidikan di `src/content/education/*.json` memerlukan `institution`, `program`; `summary` dan `period` opsional.
-- Kredensial di `src/content/credentials/*.json` memerlukan `name` dan `issuer`; `issuedAt`, `verifyUrl`, dan dokumen opsional. Berkas lokal berada di `public/assets/documents/`.
+- Item keahlian berada di `src/content/skills/*.json`: `name`, `category`, `context`/`projectSlugs`/`sourcePages` opsional, `order` (default `100`), `draft` (default `true`). Kelompok kategori dibentuk dari data, bukan daftar kategori di template. Item terbit hanya boleh menunjuk proyek yang juga terbit.
+- Item pengalaman di `src/content/experience/*.json` memerlukan `category`, `organization`, `role`, dan `summary`; `details`, `period`, serta `sourcePages` opsional. Rincian panjang tetap satu entri dan dibuka melalui dialog; tanpa JavaScript elemen `<details>` menampilkan isi yang sama. Kategori dikelompokkan otomatis.
+- Item pendidikan di `src/content/education/*.json` memerlukan `category`, `institution`, dan `program`; `summary`, `details`, `period`, serta `sourcePages` opsional. Pendidikan formal dan pelatihan nonformal dibedakan oleh nilai kategori, yang membentuk kelompok otomatis.
+- Kredensial di `src/content/credentials/*.json` hanya memerlukan `name`; `category` default `Sertifikasi`, sementara `details`, `issuer`, `issuedAt`, `verifyUrl`, `document`, dan `sourcePage` opsional. Jangan menebak penerbit/tanggal atau membuat tombol tanpa URL/aset nyata. Foto sertifikat opsional: simpan di `public/assets/certificates/`, lalu isi `image`, `imageAlt`, `imageWidth`, dan `imageHeight` bersama-sama. Jika ada, foto thumbnail dan pratinjau dialog memakai entry yang sama dengan `object-fit: contain`; tanpa gambar, tidak ada bingkai kosong.
 - Koleksi profil tersebut memakai default draft sehingga tidak muncul sebelum ditandai `draft: false`. Template menyembunyikan section kosong; CV/email tidak muncul tanpa data.
 
-Tambahkan entri baru ke file koleksi yang sudah ada untuk menambah daftar tanpa mengedit tata letak. Menambahkan jenis data atau perilaku baru—misalnya formulir, kalkulasi, atau desain section yang berbeda—memerlukan perubahan template, bukan sekadar menambah konten.
+Tambahkan satu berkas JSON/Markdown ke koleksi yang sudah ada untuk menambah entri/kategori tanpa mengedit tata letak. Project detail memakai konten koleksi yang sama dengan route SSR sebagai fallback; pengalaman, pendidikan, dan kredensial memakai dialog native dengan `<details>` fallback; kontrol CV dan kontak tetap berupa tautan bila JavaScript mati. Menambahkan jenis data atau perilaku baru—misalnya formulir atau kalkulasi—memerlukan perubahan template, bukan sekadar menambah konten.
 
 ## QA konten
 

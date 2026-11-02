@@ -1,0 +1,8 @@
+{
+  "name": "Sensor, aktuator, dan mikrokontroler",
+  "category": "Pembelajaran organisasi",
+  "context": "Pembelajaran mencakup pemasangan sensor dan aktuator, soldering, perancangan komponen, serta protokol komunikasi mikrokontroler.",
+  "sourcePages": [1, 2],
+  "order": 90,
+  "draft": false
+}

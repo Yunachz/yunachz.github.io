@@ -1,0 +1,51 @@
+---
+import { render } from 'astro:content';
+import type { ProjectEntry } from '../lib/projects';
+import { sitePath } from '../lib/urls';
+
+interface Props {
+  project: ProjectEntry;
+  titleTag?: 'h1' | 'h2';
+}
+
+const { project, titleTag = 'h1' } = Astro.props;
+const { Content } = await render(project);
+const { slug, title, summary, category, tags, repositoryUrl, demoUrl, sourceLinks, cover, alt, coverWidth, coverHeight } = project.data;
+const coverSource = sourceLinks.find((source) => source.label === 'Foto prototipe');
+---
+
+<article class="project-detail" aria-labelledby={`project-title-${slug}`}>
+  <header class="project-detail__header">
+    <p class="project-detail__category">{category}</p>
+    {titleTag === 'h1'
+      ? <h1 id={`project-title-${slug}`} class="project-detail__title" data-dialog-title>{title}</h1>
+      : <h2 id={`project-title-${slug}`} class="project-detail__title" data-dialog-title>{title}</h2>}
+    <p class="project-detail__summary">{summary}</p>
+    <p class="project-detail__provenance">Ringkasan ini mengikuti README dan berkas di repositori publik; bagian sumber menyediakan tautan untuk memeriksanya.</p>
+    <ul class="tag-list" aria-label={`Teknologi yang disebut di dokumentasi ${title}`}>
+      {tags.map((tag) => <li>{tag}</li>)}
+    </ul>
+  </header>
+  {cover && (
+    <figure class="project-detail__media">
+      <img src={sitePath(cover)} alt={alt ?? ''} width={coverWidth} height={coverHeight} loading="lazy" decoding="async" />
+      <figcaption>
+        <span>Foto dokumentasi repositori publik</span>
+        {coverSource && <a href={coverSource.url} target="_blank" rel="noopener noreferrer">Sumber gambar</a>}
+      </figcaption>
+    </figure>
+  )}
+  <div class="project-detail__body">
+    <div class="prose"><Content /></div>
+    <aside class="source-panel" aria-labelledby={`source-heading-${slug}`}>
+      <h3 id={`source-heading-${slug}`}>Sumber proyek</h3>
+      <ul>
+        {sourceLinks.map((source) => <li><a href={source.url} target="_blank" rel="noopener noreferrer">{source.label} <span aria-hidden="true">↗</span></a></li>)}
+      </ul>
+      <div class="source-panel__actions">
+        {repositoryUrl && <a class="button button--primary" href={repositoryUrl} target="_blank" rel="noopener noreferrer">Buka repositori <span aria-hidden="true">↗</span></a>}
+        {demoUrl && <a class="text-link" href={demoUrl} target="_blank" rel="noopener noreferrer">Buka demo <span aria-hidden="true">↗</span></a>}
+      </div>
+    </aside>
+  </div>
+</article>
