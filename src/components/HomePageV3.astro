@@ -2,7 +2,7 @@
 import { getCollection } from 'astro:content';
 import PortfolioLayout from '../layouts/PortfolioLayoutV3.astro';
 import { categoriesForProjects, categoryLabelForProject } from '../lib/project-categories';
-import { chunkRecords } from '../lib/credential-pagination';
+import { buildCredentialDisplayPages } from '../lib/credential-pagination';
 import { translate } from '../lib/i18n';
 import { sitePath } from '../lib/urls';
 
@@ -16,11 +16,13 @@ if (!profile || profile.kind !== 'profile' || !contact || contact.kind !== 'cont
 
 const projectCollection = (await getCollection('projects')).filter(({ data }) => !data.draft).sort((a, b) => a.data.order - b.data.order || a.data.slug.localeCompare(b.data.slug));
 const skills = (await getCollection('skills')).filter(({ data }) => !data.draft).sort((a, b) => a.data.order - b.data.order || a.id.localeCompare(b.id));
+const skillGroups = (await getCollection('skillGroups')).filter(({ data }) => !data.draft).sort((a, b) => a.data.order - b.data.order || a.id.localeCompare(b.id));
 const experience = (await getCollection('experience')).filter(({ data }) => !data.draft).sort((a, b) => a.data.order - b.data.order || a.id.localeCompare(b.id));
 const education = (await getCollection('education')).filter(({ data }) => !data.draft).sort((a, b) => a.data.order - b.data.order || a.id.localeCompare(b.id));
 const credentials = (await getCollection('credentials')).filter(({ data }) => !data.draft).sort((a, b) => a.data.order - b.data.order || a.id.localeCompare(b.id));
+const credentialSamples = (await getCollection('credentialSamples')).filter(({ data }) => !data.draft).sort((a, b) => a.data.order - b.data.order || a.id.localeCompare(b.id));
 const software = (await getCollection('software')).filter(({ data }) => !data.draft).sort((a, b) => a.data.order - b.data.order || a.id.localeCompare(b.id));
-const credentialPages = chunkRecords(credentials);
+const credentialPages = buildCredentialDisplayPages(credentials, credentialSamples);
 const categories = categoriesForProjects(projectCollection.map(({ data }) => data));
 const formalEducation = education.filter(({ data }) => data.categoryId === 'formal');
 const nonformalEducation = education.filter(({ data }) => data.categoryId === 'nonformal');
@@ -233,18 +235,28 @@ const navItems = [
       <button type="button" role="tab" id="software-tab" aria-controls="software-panel" aria-selected="false" tabindex="-1" data-skill-tab="software" hidden {...copyAttrs(id('software.tab'), en('software.tab'))}>{id('software.tab')}</button>
     </div>
     <div class="skills-panel" id="skills-panel" role="tabpanel" aria-labelledby="skills-tab" data-skill-panel="skills">
-      <div class="skills-strip" data-skills-strip data-skill-count={skills.length}>
-        {skills.map((skill, index) => (
-          <article class="skill-card" data-skill-card data-skill-id={skill.id} data-active={index === 0 ? 'true' : 'false'} style={`--skill-art: url('${sitePath(skill.data.media.src)}')`}>
-            <button class="skill-card__button" type="button" data-skill-activate disabled aria-expanded={index === 0 ? 'true' : 'false'} aria-controls={`skill-copy-${skill.id}`} aria-label={id('skills.expand', { title: skill.data.copy.id.title })} data-aria-id={id('skills.expand', { title: skill.data.copy.id.title })} data-aria-en={en('skills.expand', { title: skill.data.copy.en.title })}>
-              <span class="skill-card__label" data-copy-id={skill.data.copy.id.shortLabel} data-copy-en={skill.data.copy.en.shortLabel}>{skill.data.copy.id.shortLabel}</span>
-              <span class="skill-card__detail" id={`skill-copy-${skill.id}`}>
-                <strong data-copy-id={skill.data.copy.id.title} data-copy-en={skill.data.copy.en.title}>{skill.data.copy.id.title}</strong>
-                <span data-copy-id={skill.data.copy.id.summary} data-copy-en={skill.data.copy.en.summary}>{skill.data.copy.id.summary}</span>
-              </span>
-            </button>
-          </article>
-        ))}
+      <div class="skills-strip" data-skills-strip data-skill-group-count={skillGroups.length} data-canonical-skill-count={skills.length}>
+        {skillGroups.map((group) => {
+          const representativeSkill = skills.find(({ id: skillId }) => group.data.skillIds.includes(skillId));
+          const ariaId = id('skills.expand', { title: group.data.copy.id.title });
+          const ariaEn = en('skills.expand', { title: group.data.copy.en.title });
+          return (
+            <article class="skill-card" data-skill-card data-skill-id={group.id} data-skill-ids={group.data.skillIds.join(' ')} data-chip-count={group.data.chips.length} data-active="false" style={representativeSkill ? `--skill-art: url('${sitePath(representativeSkill.data.media.src)}')` : undefined}>
+              <button class="skill-card__button" type="button" data-skill-activate disabled aria-expanded="false" aria-controls={`skill-copy-${group.id}`} aria-label={ariaId} data-aria-id={ariaId} data-aria-en={ariaEn}>
+                <span class="skill-card__label" data-copy-id={group.data.copy.id.shortLabel} data-copy-en={group.data.copy.en.shortLabel}>{group.data.copy.id.shortLabel}</span>
+                <span class="skill-card__detail" id={`skill-copy-${group.id}`}>
+                  <span class="skill-card__detail-inner">
+                    <strong data-copy-id={group.data.copy.id.title} data-copy-en={group.data.copy.en.title}>{group.data.copy.id.title}</strong>
+                    <span data-copy-id={group.data.copy.id.summary} data-copy-en={group.data.copy.en.summary}>{group.data.copy.id.summary}</span>
+                    <ul class="skill-chip-list">
+                      {group.data.chips.map((chip) => <li data-copy-id={chip.label.id} data-copy-en={chip.label.en}>{chip.label.id}</li>)}
+                    </ul>
+                  </span>
+                </span>
+              </button>
+            </article>
+          );
+        })}
       </div>
     </div>
     <div class="software-panel" id="software-panel" role="tabpanel" aria-labelledby="software-tab" data-skill-panel="software">
@@ -318,7 +330,7 @@ const navItems = [
       <div class="experience-gallery__stage" data-experience-stage role="region" tabindex="0" aria-roledescription="carousel" aria-label={id('experience.galleryLabel')} data-aria-id={id('experience.galleryLabel')} data-aria-en={en('experience.galleryLabel')}>
         {experience.map((entry, index) => (
           <button class="experience-slide" type="button" data-experience-slide data-gallery-drag-zone data-experience-index={index} data-position={index} aria-label={id('experience.openItem', { title: entry.data.organization })} data-aria-id={id('experience.openItem', { title: entry.data.organization })} data-aria-en={en('experience.openItem', { title: entry.data.organization })}>
-            <img src={sitePath(entry.data.media.src)} alt={entry.data.copy.id.imageAlt} data-alt-id={entry.data.copy.id.imageAlt} data-alt-en={entry.data.copy.en.imageAlt} width={entry.data.media.width} height={entry.data.media.height} loading={index === 0 ? 'eager' : 'lazy'} decoding="async" />
+          <img src={sitePath(entry.data.media.src)} alt={entry.data.copy.id.imageAlt} data-alt-id={entry.data.copy.id.imageAlt} data-alt-en={entry.data.copy.en.imageAlt} width={entry.data.media.width} height={entry.data.media.height} loading={index === 0 ? 'eager' : 'lazy'} decoding="async" draggable={false} />
           </button>
         ))}
       </div>
@@ -361,24 +373,46 @@ const navItems = [
       </div>
     </header>
     <div class="credential-viewport" data-credential-viewport>
-      <div class="credential-track" data-credential-track style={`--credential-page-count: ${credentialPages.length}`}>
+      <div class="credential-track" data-credential-track style={`--credential-page-count: ${Math.max(1, credentialPages.length)}`}>
         {credentialPages.map((page, pageIndex) => (
-          <div class="credential-page" data-credential-page data-page-index={pageIndex} role="group" aria-label={id('credentials.page', { index: pageIndex + 1, count: credentialPages.length })} data-aria-id={id('credentials.page', { index: pageIndex + 1, count: credentialPages.length })} data-aria-en={en('credentials.page', { index: pageIndex + 1, count: credentialPages.length })}>
+          <div class="credential-page" data-credential-page data-page-kind={page.kind} data-page-index={pageIndex} role="group" aria-label={id('credentials.page', { index: pageIndex + 1, count: credentialPages.length })} data-aria-id={id('credentials.page', { index: pageIndex + 1, count: credentialPages.length })} data-aria-en={en('credentials.page', { index: pageIndex + 1, count: credentialPages.length })}>
             <div class="credential-grid">
-              {page.map((entry) => {
+              {page.items.map((item) => {
+                if (item.kind === 'real') {
+                  const entry = item.entry;
+                  const media = entry.data.media;
+                  const title = { id: entry.data.name, en: entry.data.name };
+                  const alt = media.alt ?? { id: id('credentials.placeholderAlt'), en: en('credentials.placeholderAlt') };
+                  const payload = JSON.stringify({
+                    sample: false,
+                    title,
+                    media: { ...media, src: sitePath(media.src) },
+                    alt,
+                  });
+                  return (
+                    <a class="credential-card" href={sitePath(media.src)} target="_blank" rel="noopener noreferrer" data-credential-open data-credential-payload={payload} aria-label={id('credentials.open', { title: title.id })} data-aria-id={id('credentials.open', { title: title.id })} data-aria-en={en('credentials.open', { title: title.en })}>
+                      <figure>
+                        <img src={sitePath(media.src)} alt={alt.id} data-alt-id={alt.id} data-alt-en={alt.en} width={media.width} height={media.height} loading="lazy" decoding="async" />
+                      </figure>
+                      <h3>{title.id}</h3>
+                    </a>
+                  );
+                }
+
+                const entry = item.entry;
+                const media = entry.data.media;
+                const title = { id: id('credentials.samplePreview'), en: en('credentials.samplePreview') };
                 const payload = JSON.stringify({
-                  name: entry.data.name,
-                  media: { ...entry.data.media, src: sitePath(entry.data.media.src) },
-                  alt: entry.data.media.alt ?? { id: id('credentials.placeholderAlt'), en: en('credentials.placeholderAlt') },
+                  sample: true,
+                  title,
+                  media: { ...media, src: sitePath(media.src) },
+                  alt: media.alt,
                 });
-                const imageAltId = entry.data.media.alt?.id ?? id('credentials.placeholderAlt');
-                const imageAltEn = entry.data.media.alt?.en ?? en('credentials.placeholderAlt');
                 return (
-                  <a class="credential-card" href={sitePath(entry.data.media.src)} target="_blank" rel="noopener noreferrer" data-credential-open data-credential-payload={payload} aria-label={id('credentials.open', { title: entry.data.name })} data-aria-id={id('credentials.open', { title: entry.data.name })} data-aria-en={en('credentials.open', { title: entry.data.name })}>
+                  <a class="credential-card credential-card--sample" href={sitePath(media.src)} target="_blank" rel="noopener noreferrer" data-credential-open data-credential-sample="true" data-credential-payload={payload} aria-label={title.id} data-aria-id={title.id} data-aria-en={title.en}>
                     <figure>
-                      <img src={sitePath(entry.data.media.src)} alt={imageAltId} data-alt-id={imageAltId} data-alt-en={imageAltEn} width={entry.data.media.width} height={entry.data.media.height} loading="lazy" decoding="async" />
+                      <img src={sitePath(media.src)} alt="" width={media.width} height={media.height} loading="lazy" decoding="async" />
                     </figure>
-                    <h3>{entry.data.name}</h3>
                   </a>
                 );
               })}
@@ -389,6 +423,7 @@ const navItems = [
     </div>
   </section>
 
+  <hr class="section-divider content-shell" aria-hidden="true" />
   <section class="contact-section content-shell" id="contact" aria-labelledby="contact-heading">
     <div class="contact-section__copy">
       <p class="contact-section__eyebrow" {...copyAttrs(id('contact.eyebrow'), en('contact.eyebrow'))}>{id('contact.eyebrow')}</p>
@@ -408,7 +443,8 @@ const navItems = [
           <span data-copy-id={id('contact.send')} data-copy-en={en('contact.send')}>{id('contact.send')}</span>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6"/></svg>
         </a>
-        <span class="copy-announcement" data-copy-announcement role="status" aria-live="polite"></span>
+        <span class="copy-error" data-copy-error hidden></span>
+        <span class="copy-announcement sr-only" data-copy-announcement role="status" aria-live="polite"></span>
       </div>
       <nav class="social-links" aria-label={id('contact.channels')} data-aria-id={id('contact.channels')} data-aria-en={en('contact.channels')}>
         <a href={contact.linkedin} target="_blank" rel="noopener noreferrer" aria-label={id('contact.linkedin')} data-aria-id={id('contact.linkedin')} data-aria-en={en('contact.linkedin')}>

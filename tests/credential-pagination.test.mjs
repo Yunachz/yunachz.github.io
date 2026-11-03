@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { clampPageIndex, paginateRecords } from '../src/lib/credential-pagination.ts';
+import { buildCredentialDisplayPages, clampPageIndex, paginateRecords } from '../src/lib/credential-pagination.ts';
 
 function fixture(count) {
   return Array.from({ length: count }, (_, index) => `credential-${index + 1}`);
@@ -37,4 +37,23 @@ test('certificate pagination clamps stale page state after collection changes', 
 test('certificate pagination rejects invalid page sizes instead of returning phantom pages', () => {
   assert.throws(() => paginateRecords(fixture(3), 0, 0), RangeError);
   assert.throws(() => paginateRecords(fixture(3), 0, 1.5), RangeError);
+});
+
+test('display samples stay on their own pages and never consume real credential slots', () => {
+  const real = fixture(6);
+  const samples = ['layout-sample-1', 'layout-sample-2'];
+  const pages = buildCredentialDisplayPages(real, samples);
+
+  assert.deepEqual(pages.map(({ kind, items }) => [kind, items.length]), [['real', 6], ['sample', 2]]);
+  assert.deepEqual(pages.flatMap(({ items }) => items.filter((item) => item.kind === 'real').map((item) => item.entry)), real);
+  assert.deepEqual(pages.flatMap(({ items }) => items.filter((item) => item.kind === 'sample').map((item) => item.entry)), samples);
+
+  const withFutureCredential = buildCredentialDisplayPages(fixture(7), samples);
+  assert.deepEqual(withFutureCredential.map(({ kind, items }) => [kind, items.length]), [
+    ['real', 6],
+    ['real', 1],
+    ['sample', 2],
+  ]);
+  assert.deepEqual(buildCredentialDisplayPages(real, []).map(({ items }) => items.length), [6]);
+  assert.deepEqual(buildCredentialDisplayPages([], []), []);
 });

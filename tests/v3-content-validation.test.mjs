@@ -42,6 +42,13 @@ test('generic validator accepts authorized content growth and registry-backed ca
   skill.id = 'future-control-skill';
   skill.data.projectSlugs = ['future-control-project'];
   snapshot.skills.push(skill);
+  const programmingGroup = snapshot.skillGroups.find(({ id }) => id === 'programming-data');
+  if (!programmingGroup) throw new Error('Programming group fixture is missing.');
+  programmingGroup.data.skillIds.push('future-control-skill');
+  programmingGroup.data.chips.push({
+    label: { id: 'Kemampuan baru', en: 'New capability' },
+    skillIds: ['future-control-skill'],
+  });
 
   const experience = structuredClone(snapshot.experience.find(({ data }) => data.draft === false));
   experience.source = 'fixture:future-experience';
@@ -89,6 +96,43 @@ test('education logos are optional, local image assets with positive intrinsic d
   if (!externalEntry) throw new Error('UPNVJ fixture is missing.');
   externalEntry.data.logo.src = 'https://example.com/logo.png';
   assert.throws(() => validateV3Content(external), /logo.src harus berada di public\/assets/);
+});
+
+test('sample layout cards validate separately and do not change the six credential count', () => {
+  const snapshot = cloneSource();
+  assert.equal(snapshot.credentialSamples.filter(({ data }) => data.draft === false).length, 2);
+  assert.equal(validateV3Content(snapshot).credentials, 6);
+
+  const withoutSamples = cloneSource();
+  withoutSamples.credentialSamples = [];
+  assert.equal(validateV3Content(withoutSamples).credentials, 6);
+
+  const fabricated = cloneSource();
+  const sample = fabricated.credentialSamples[0];
+  if (!sample) throw new Error('Sample layout fixture is missing.');
+  sample.data.issuer = 'Fabricated issuer';
+  assert.throws(() => validateV3Content(fabricated), /sample tidak boleh memuat issuer/);
+});
+
+test('skill group registry rejects duplicate, unmapped, and unknown canonical skill references', () => {
+  const duplicated = cloneSource();
+  const secondGroup = duplicated.skillGroups.find(({ id }) => id === 'embedded-electronics');
+  if (!secondGroup) throw new Error('Embedded group fixture is missing.');
+  secondGroup.data.skillIds.push('electrical-engineering');
+  assert.throws(() => validateV3Content(duplicated), /sudah dipetakan di grup lain/);
+
+  const unmapped = cloneSource();
+  const electrical = unmapped.skillGroups.find(({ id }) => id === 'electrical-control');
+  if (!electrical) throw new Error('Electrical group fixture is missing.');
+  electrical.data.skillIds = electrical.data.skillIds.filter((id) => id !== 'plc');
+  electrical.data.chips = electrical.data.chips.filter((chip) => !chip.skillIds.includes('plc'));
+  assert.throws(() => validateV3Content(unmapped), /Skill terbit plc belum dipetakan/);
+
+  const unknown = cloneSource();
+  const programming = unknown.skillGroups.find(({ id }) => id === 'programming-data');
+  if (!programming) throw new Error('Programming group fixture is missing.');
+  programming.data.chips[0].skillIds[0] = 'unrecorded-cpp';
+  assert.throws(() => validateV3Content(unknown), /merujuk skill di luar grup unrecorded-cpp/);
 });
 
 test('generic validator rejects unknown project categories and published references to drafts', () => {

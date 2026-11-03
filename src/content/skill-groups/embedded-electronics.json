@@ -1,0 +1,24 @@
+{
+  "copy": {
+    "id": {
+      "title": "Embedded & Elektronika",
+      "shortLabel": "Embedded Sistem",
+      "summary": "Mengembangkan pemahaman mikrokontroler, sensor, aktuator, dan PCB lewat latihan serta prototipe."
+    },
+    "en": {
+      "title": "Embedded & Electronics",
+      "shortLabel": "Embedded Systems",
+      "summary": "Building understanding of microcontrollers, sensors, actuators, and PCBs through practice and prototypes."
+    }
+  },
+  "skillIds": ["embedded-learning", "proteus-pcb-learning"],
+  "chips": [
+    { "label": { "id": "Sensor & aktuator", "en": "Sensors & actuators" }, "skillIds": ["embedded-learning"] },
+    { "label": { "id": "Mikrokontroler", "en": "Microcontrollers" }, "skillIds": ["embedded-learning"] },
+    { "label": { "id": "Soldering", "en": "Soldering" }, "skillIds": ["embedded-learning"] },
+    { "label": { "id": "Protokol komunikasi", "en": "Communication protocols" }, "skillIds": ["embedded-learning"] },
+    { "label": { "id": "PCB dengan Proteus", "en": "PCB with Proteus" }, "skillIds": ["proteus-pcb-learning"] }
+  ],
+  "order": 20,
+  "draft": false
+}

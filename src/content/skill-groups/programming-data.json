@@ -1,0 +1,21 @@
+{
+  "copy": {
+    "id": {
+      "title": "Pemrograman & Data",
+      "shortLabel": "Pemrograman",
+      "summary": "Menggunakan Python untuk pemrograman sambil mempelajari dasar machine learning."
+    },
+    "en": {
+      "title": "Programming & Data",
+      "shortLabel": "Programming",
+      "summary": "Using Python for programming while learning the basics of machine learning."
+    }
+  },
+  "skillIds": ["python", "machine-learning-learning"],
+  "chips": [
+    { "label": { "id": "Python", "en": "Python" }, "skillIds": ["python"] },
+    { "label": { "id": "Dasar machine learning", "en": "Machine learning basics" }, "skillIds": ["machine-learning-learning"] }
+  ],
+  "order": 30,
+  "draft": false
+}

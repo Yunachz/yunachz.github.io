@@ -1,0 +1,15 @@
+{
+  "sample": true,
+  "media": {
+    "src": "assets/placeholders/gggggg.jpg",
+    "width": 1920,
+    "height": 1080,
+    "kind": "placeholder",
+    "alt": {
+      "id": "Ilustrasi tata letak contoh, bukan gambar sertifikat.",
+      "en": "Sample layout illustration; not a certificate image."
+    }
+  },
+  "order": 10,
+  "draft": false
+}

@@ -105,10 +105,12 @@ export async function loadV3Content(rootDirectory = process.cwd()) {
     projects,
     siteEntries: await jsonCollection('site'),
     skills: await jsonCollection('skills'),
+    skillGroups: await jsonCollection('skill-groups'),
     software: await jsonCollection('software'),
     experience: await jsonCollection('experience'),
     education: await jsonCollection('education'),
     credentials: await jsonCollection('credentials'),
+    credentialSamples: await jsonCollection('credential-samples'),
     categoryRegistry: JSON.parse(await readFile(path.join(root, 'src/lib/project-categories.json'), 'utf8')),
     publicRoot,
     aboutDraft: about.data.draft,
@@ -116,8 +118,8 @@ export async function loadV3Content(rootDirectory = process.cwd()) {
 }
 
 export function validateV3Content(snapshot) {
-  const { projects, siteEntries, skills, software, experience, education, credentials, categoryRegistry, publicRoot, aboutDraft } = snapshot;
-  const collections = { projects, skills, software, experience, education, credentials };
+  const { projects, siteEntries, skills, skillGroups, software, experience, education, credentials, credentialSamples, categoryRegistry, publicRoot, aboutDraft } = snapshot;
+  const collections = { projects, skills, skillGroups, software, experience, education, credentials, credentialSamples };
   for (const [name, entries] of Object.entries(collections)) requireCondition(Array.isArray(entries), `${name} harus berupa daftar`);
 
   const categoryIds = new Set();
@@ -200,6 +202,40 @@ export function validateV3Content(snapshot) {
     }
   }
 
+  const skillIds = new Set(skills.map(({ id }) => id));
+  const publishedSkillIds = new Set(published(skills).map(({ id }) => id));
+  const seenSkillGroups = new Set();
+  const groupedSkillIds = new Set();
+  const publishedGroupedSkillIds = new Set();
+  for (const { source, id, data } of skillGroups) {
+    requireCondition(typeof id === 'string' && slugPattern.test(id), `${source}: ID grup skill tidak valid`);
+    requireCondition(!seenSkillGroups.has(id), `${source}: ID grup skill duplikat ${id}`);
+    seenSkillGroups.add(id);
+    for (const locale of ['id', 'en']) {
+      for (const field of ['title', 'shortLabel', 'summary']) requireText(data.copy?.[locale]?.[field], `${source} copy.${locale}.${field}`);
+    }
+    requireCondition(Array.isArray(data.skillIds) && data.skillIds.length > 0, `${source}: skillIds harus berisi rekaman skill`);
+    const groupSkillIds = new Set();
+    for (const skillId of data.skillIds) {
+      requireCondition(skillIds.has(skillId), `${source}: skill tidak dikenal ${skillId}`);
+      requireCondition(!groupSkillIds.has(skillId), `${source}: skill duplikat ${skillId}`);
+      requireCondition(!groupedSkillIds.has(skillId), `${source}: skill ${skillId} sudah dipetakan di grup lain`);
+      groupSkillIds.add(skillId);
+      groupedSkillIds.add(skillId);
+      if (data.draft === false) {
+        requireCondition(publishedSkillIds.has(skillId), `${source}: grup terbit merujuk skill draft ${skillId}`);
+        publishedGroupedSkillIds.add(skillId);
+      }
+    }
+    requireCondition(Array.isArray(data.chips) && data.chips.length > 0, `${source}: chips harus berisi label kemampuan`);
+    for (const [index, chip] of data.chips.entries()) {
+      requireLocalized(chip.label, `${source} chips[${index}].label`);
+      requireCondition(Array.isArray(chip.skillIds) && chip.skillIds.length > 0, `${source} chips[${index}].skillIds harus berisi referensi skill`);
+      for (const skillId of chip.skillIds) requireCondition(groupSkillIds.has(skillId), `${source} chips[${index}] merujuk skill di luar grup ${skillId}`);
+    }
+  }
+  for (const skillId of publishedSkillIds) requireCondition(publishedGroupedSkillIds.has(skillId), `Skill terbit ${skillId} belum dipetakan ke grup`);
+
   for (const { source, data } of experience) {
     for (const locale of ['id', 'en']) {
       for (const field of ['category', 'role', 'summary', 'imageAlt']) requireText(data.copy?.[locale]?.[field], `${source} copy.${locale}.${field}`);
@@ -234,6 +270,16 @@ export function validateV3Content(snapshot) {
     if (data.document !== undefined) requireLocalAsset(data.document, `${source} document`, publicRoot, 'assets/documents/');
   }
 
+  for (const { source, data } of credentialSamples) {
+    requireCondition(data.sample === true, `${source}: sample harus bernilai true`);
+    requireCondition(data.media?.kind === 'placeholder', `${source}: sample hanya boleh memakai media placeholder`);
+    requireMedia(data.media, source, publicRoot, 'credential');
+    requireLocalized(data.media.alt, `${source} media.alt`);
+    for (const field of ['name', 'issuer', 'issuedAt', 'verifyUrl', 'document']) {
+      requireCondition(data[field] === undefined, `${source}: sample tidak boleh memuat ${field}`);
+    }
+  }
+
   const softwareIds = new Set();
   const softwareNames = new Set();
   for (const { source, id, data } of software) {
@@ -261,6 +307,7 @@ export function validateV3Content(snapshot) {
   return {
     projects: published(projects).length,
     skills: published(skills).length,
+    skillGroups: published(skillGroups).length,
     software: published(software).length,
     experience: published(experience).length,
     education: published(education).length,

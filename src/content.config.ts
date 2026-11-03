@@ -38,6 +38,11 @@ const skillCopy = z.object({
   id: z.object({ title: z.string().trim().min(1), shortLabel: z.string().trim().min(1), summary: z.string().trim().min(1), imageAlt: z.string().trim().min(1).optional() }).strict(),
   en: z.object({ title: z.string().trim().min(1), shortLabel: z.string().trim().min(1), summary: z.string().trim().min(1), imageAlt: z.string().trim().min(1).optional() }).strict(),
 }).strict();
+const skillGroupCopy = z.object({
+  id: z.object({ title: z.string().trim().min(1), shortLabel: z.string().trim().min(1), summary: z.string().trim().min(1) }).strict(),
+  en: z.object({ title: z.string().trim().min(1), shortLabel: z.string().trim().min(1), summary: z.string().trim().min(1) }).strict(),
+}).strict();
+const skillGroupChip = z.object({ label: localizedText, skillIds: z.array(slug).min(1) }).strict();
 const experienceCopy = z.object({
   id: z.object({ category: z.string().trim().min(1), role: z.string().trim().min(1), summary: z.string().trim().min(1), details: details.min(1), imageAlt: z.string().trim().min(1) }).strict(),
   en: z.object({ category: z.string().trim().min(1), role: z.string().trim().min(1), summary: z.string().trim().min(1), details: details.min(1), imageAlt: z.string().trim().min(1) }).strict(),
@@ -50,7 +55,6 @@ const educationCopy = z.object({
   id: z.object({ program: z.string().trim().min(1), summary: z.string().trim().min(1).optional() }).strict(),
   en: z.object({ program: z.string().trim().min(1), summary: z.string().trim().min(1).optional() }).strict(),
 }).strict();
-
 const projects = defineCollection({
   loader: glob({ base: './src/content/projects', pattern: '**/*.md' }),
   schema: z.object({
@@ -133,6 +137,17 @@ const skills = defineCollection({
   }).strict(),
 });
 
+const skillGroups = defineCollection({
+  loader: glob({ base: './src/content/skill-groups', pattern: '**/*.json' }),
+  schema: z.object({
+    copy: skillGroupCopy,
+    skillIds: z.array(slug).min(1),
+    chips: z.array(skillGroupChip).min(1),
+    order: z.number().int().default(100),
+    draft: z.boolean().default(true),
+  }).strict(),
+});
+
 const experience = defineCollection({
   loader: glob({ base: './src/content/experience', pattern: '**/*.json' }),
   schema: z.object({
@@ -180,6 +195,22 @@ const credentials = defineCollection({
   }).strict(),
 });
 
+const credentialSamples = defineCollection({
+  loader: glob({ base: './src/content/credential-samples', pattern: '**/*.json' }),
+  schema: z.object({
+    sample: z.literal(true),
+    media: z.object({
+      src: z.string().trim().min(1),
+      width: z.number().int().positive(),
+      height: z.number().int().positive(),
+      kind: z.literal('placeholder'),
+      alt: localizedText,
+    }).strict(),
+    order: z.number().int().default(100),
+    draft: z.boolean().default(true),
+  }).strict(),
+});
+
 const software = defineCollection({
   loader: glob({ base: './src/content/software', pattern: '**/*.json' }),
   schema: z.object({
@@ -191,4 +222,4 @@ const software = defineCollection({
   }).strict(),
 });
 
-export const collections = { projects, site, sections, skills, experience, education, credentials, software };
+export const collections = { projects, site, sections, skills, skillGroups, experience, education, credentials, credentialSamples, software };

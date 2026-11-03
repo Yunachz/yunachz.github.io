@@ -1,0 +1,22 @@
+{
+  "copy": {
+    "id": {
+      "title": "Media & Dokumentasi",
+      "shortLabel": "Media & Visual",
+      "summary": "Mendukung dokumentasi visual melalui pengeditan, fotografi, dan video."
+    },
+    "en": {
+      "title": "Media & Documentation",
+      "shortLabel": "Media & Visual",
+      "summary": "Supporting visual documentation through editing, photography, and video."
+    }
+  },
+  "skillIds": ["editing"],
+  "chips": [
+    { "label": { "id": "Editing visual", "en": "Visual editing" }, "skillIds": ["editing"] },
+    { "label": { "id": "Fotografi", "en": "Photography" }, "skillIds": ["editing"] },
+    { "label": { "id": "Video dokumentasi", "en": "Video documentation" }, "skillIds": ["editing"] }
+  ],
+  "order": 40,
+  "draft": false
+}

@@ -12,12 +12,10 @@
   },
   "copy": {
     "id": {
-      "program": "S1 Teknik Elektro",
-      "summary": "Mahasiswa program sarjana Teknik Elektro."
+      "program": "S1 Teknik Elektro"
     },
     "en": {
-      "program": "Undergraduate Electrical Engineering",
-      "summary": "Undergraduate student in Electrical Engineering."
+      "program": "Undergraduate Electrical Engineering"
     }
   },
   "sourcePages": [

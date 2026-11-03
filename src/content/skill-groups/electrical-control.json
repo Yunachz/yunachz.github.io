@@ -1,0 +1,24 @@
+{
+  "copy": {
+    "id": {
+      "title": "Kelistrikan & Kendali",
+      "shortLabel": "Kendali Listrik",
+      "summary": "Dasar kelistrikan, diagram, instalasi, analisis rangkaian, dan kendali PLC."
+    },
+    "en": {
+      "title": "Electrical & Control",
+      "shortLabel": "Electrical Control",
+      "summary": "Electrical fundamentals, diagrams, installations, circuit analysis, and PLC control."
+    }
+  },
+  "skillIds": ["electrical-engineering", "electrical-diagrams", "electrical-installations", "circuit-analysis", "plc"],
+  "chips": [
+    { "label": { "id": "Diagram listrik", "en": "Electrical diagrams" }, "skillIds": ["electrical-diagrams"] },
+    { "label": { "id": "Instalasi penerangan", "en": "Lighting installations" }, "skillIds": ["electrical-installations"] },
+    { "label": { "id": "Motor listrik", "en": "Electric motors" }, "skillIds": ["electrical-engineering"] },
+    { "label": { "id": "Analisis rangkaian", "en": "Circuit analysis" }, "skillIds": ["circuit-analysis"] },
+    { "label": { "id": "PLC", "en": "PLC" }, "skillIds": ["plc"] }
+  ],
+  "order": 10,
+  "draft": false
+}

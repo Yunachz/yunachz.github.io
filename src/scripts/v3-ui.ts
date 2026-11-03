@@ -1,5 +1,25 @@
 import { messages, translate, type Locale, type MessageKey } from '../lib/i18n';
 import { clampPageIndex, paginateRecords } from '../lib/credential-pagination';
+import { ambientGradientWeights, ambientOrbPositions, clampScrollProgress } from '../lib/ambient-gradient';
+import {
+  coverflowPose,
+  coverflowPositionFromDrag,
+  nearestCoverflowTarget,
+  normalizeCoverflowPosition,
+  wrapCoverflowOffset,
+} from '../lib/experience-coverflow';
+import { resolveSkillSelection, toggleTouchSkillSelection } from '../lib/skills-state';
+import {
+  beginProjectTransition,
+  createProjectMotionState,
+  getProjectIndex,
+  isProjectMotionAllowed,
+  positiveModulo,
+  scaleProjectMotion,
+  setProjectPauseReason,
+  tickProjectMotion,
+  toggleProjectPaused,
+} from '../lib/project-motion';
 
 const root = document.documentElement;
 const localeStorageKey = 'portfolio-locale';
@@ -10,6 +30,7 @@ let locale: Locale = root.dataset.locale === 'en' ? 'en' : 'id';
 const localeToggle = document.querySelector<HTMLButtonElement>('[data-locale-toggle]');
 const emailButton = document.querySelector<HTMLButtonElement>('[data-copy-email]');
 const emailAnnouncement = document.querySelector<HTMLElement>('[data-copy-announcement]');
+const emailError = document.querySelector<HTMLElement>('[data-copy-error]');
 const emailAddress = emailButton?.dataset.copyEmail ?? '';
 type EmailCopyPhase = 'idle' | 'pending' | 'success' | 'error';
 let emailCopyPhase: EmailCopyPhase = 'idle';
@@ -29,6 +50,11 @@ function renderEmailCopyState(): void {
     emailButton.textContent = emailCopyPhase === 'success' ? messages[locale]['contact.copied'] : emailAddress;
     emailButton.dataset.copyState = emailCopyPhase;
     emailButton.setAttribute('aria-busy', String(emailCopyPhase === 'pending'));
+  }
+  if (emailError) {
+    emailError.hidden = emailCopyPhase !== 'error';
+    emailError.dataset.messageKey = emailCopyPhase === 'error' ? 'contact.copyFailed' : '';
+    emailError.textContent = emailCopyPhase === 'error' ? messages[locale]['contact.copyFailed'] : '';
   }
   if (!emailAnnouncement) return;
   if (emailCopyPhase === 'success' || emailCopyPhase === 'error') {
@@ -85,7 +111,7 @@ function applyLocale(nextLocale: Locale): void {
   root.classList.remove('locale-pending');
   updateNavigationState();
   updateSkillState();
-  updateProjectState(false);
+  updateProjectState(false, 'render');
   updateExperienceState();
   updateCredentialState(undefined, false);
 }
@@ -187,7 +213,7 @@ reduceMotion.addEventListener('change', (event) => {
     clearThemeReveal();
     writeTheme(intendedTheme, true);
   }
-  updateProjectState(false);
+  updateProjectState(false, 'render');
 });
 
 const navigation = document.querySelector<HTMLElement>('#primary-navigation');
@@ -287,11 +313,6 @@ dialog?.addEventListener('close', () => {
   window.requestAnimationFrame(() => {
     const projectSlide = trigger?.closest<HTMLElement>('[data-project-slide]');
     const projectIndex = projectSlide ? filteredProjectSlides.indexOf(projectSlide) : -1;
-    if (projectIndex >= 0) {
-      projectTransition = undefined;
-      projectPhase = projectIndex * projectStep;
-      renderProjectPositions();
-    }
     const canRestoreTrigger = trigger?.isConnected
       && !trigger.closest('[hidden], [inert], [aria-hidden="true"]')
       && trigger.getClientRects().length > 0;
@@ -438,7 +459,8 @@ function createProjectDialog(payload: ProjectPayload): HTMLElement {
 }
 
 type CredentialPayload = {
-  name: string;
+  sample: boolean;
+  title: Record<Locale, string>;
   media: { src: string; width: number; height: number };
   alt: Record<Locale, string>;
 };
@@ -448,7 +470,9 @@ function createCredentialDialog(payload: CredentialPayload): HTMLElement {
   article.className = 'credential-dialog';
   const title = document.createElement('h2');
   title.dataset.dialogTitle = '';
-  title.textContent = payload.name;
+  title.dataset.copyId = payload.title.id;
+  title.dataset.copyEn = payload.title.en;
+  title.textContent = payload.title[locale];
 
   const figure = document.createElement('figure');
   const image = document.createElement('img');
@@ -468,23 +492,32 @@ function createCredentialDialog(payload: CredentialPayload): HTMLElement {
   image.addEventListener('error', () => { error.hidden = false; }, { once: true });
   image.src = payload.media.src;
   figure.append(image);
-  article.append(title, figure, error);
-  article.dataset.dialogAriaId = translate('id', 'dialog.credentialLabel', { title: payload.name });
-  article.dataset.dialogAriaEn = translate('en', 'dialog.credentialLabel', { title: payload.name });
-  article.setAttribute('aria-label', translate(locale, 'dialog.credentialLabel', { title: payload.name }));
+  const actions = document.createElement('div');
+  actions.className = 'credential-dialog__actions';
+  const download = document.createElement('a');
+  download.className = 'button button--quiet credential-dialog__download';
+  download.href = payload.media.src;
+  download.download = decodeURIComponent(new URL(payload.media.src, document.baseURI).pathname.split('/').pop() || 'image');
+  download.dataset.copyId = translate('id', 'credentials.downloadImage');
+  download.dataset.copyEn = translate('en', 'credentials.downloadImage');
+  download.textContent = messages[locale]['credentials.downloadImage'];
+  actions.append(download);
+  article.append(title, actions, figure, error);
+  article.dataset.dialogAriaId = payload.sample ? payload.title.id : translate('id', 'dialog.credentialLabel', { title: payload.title.id });
+  article.dataset.dialogAriaEn = payload.sample ? payload.title.en : translate('en', 'dialog.credentialLabel', { title: payload.title.en });
+  article.setAttribute('aria-label', payload.sample ? payload.title[locale] : translate(locale, 'dialog.credentialLabel', { title: payload.title[locale] }));
   return article;
 }
 
-const pauseReasons = new Set<string>();
-let updateProjectState: (announce: boolean) => void = () => {};
+const projectMotion = createProjectMotionState();
+let updateProjectState: (announce: boolean, mode?: 'filter' | 'resize' | 'render') => void = () => {};
 let updateProjectTimer: () => void = () => {};
 let updateCredentialState: (pageIndex?: number, announce?: boolean) => void = () => {};
 let lastProjectInteractionWasKeyboard = false;
 document.addEventListener('keydown', () => { lastProjectInteractionWasKeyboard = true; }, true);
 document.addEventListener('pointerdown', () => { lastProjectInteractionWasKeyboard = false; }, true);
 function addProjectPauseReason(reason: string, paused: boolean): void {
-  if (paused) pauseReasons.add(reason);
-  else pauseReasons.delete(reason);
+  setProjectPauseReason(projectMotion, reason, paused);
   updateProjectTimer();
 }
 
@@ -610,18 +643,11 @@ const projectPlayIcon = projectToggle?.querySelector<SVGSVGElement>('[data-icon-
 let filteredProjectSlides = [...projectSlides];
 let currentProjectIndex = 0;
 let currentFilter = 'all';
-let userPausedProjectMotion = false;
+// Motion and pause state share one owner so automatic and manual frames cannot race.
 const projectCopies: Array<{ element: HTMLElement; source: HTMLElement; repeat: number }> = [];
 const projectCountElement = document.querySelector<HTMLElement>('[data-project-count]');
-let projectPhase = 0;
 let projectStep = 404;
 let projectFrame: number | undefined;
-let previousProjectFrame = 0;
-let projectTransition: { from: number; to: number; started: number; duration: number } | undefined;
-
-function positiveModulo(value: number, modulus: number): number {
-  return modulus > 0 ? ((value % modulus) + modulus) % modulus : 0;
-}
 
 function makeProjectCopy(source: HTMLElement, sourceIndex: number, repeat: number): HTMLElement {
   const copy = source.cloneNode(true) as HTMLElement;
@@ -631,6 +657,7 @@ function makeProjectCopy(source: HTMLElement, sourceIndex: number, repeat: numbe
   copy.removeAttribute('data-active');
   copy.dataset.projectCloneIndex = String(sourceIndex);
   copy.dataset.projectCloneRepeat = String(repeat);
+  copy.dataset.projectInstance = '';
   copy.setAttribute('aria-hidden', 'true');
   copy.removeAttribute('id');
   copy.querySelectorAll('[id]').forEach((node) => node.removeAttribute('id'));
@@ -646,6 +673,7 @@ function makeProjectCopy(source: HTMLElement, sourceIndex: number, repeat: numbe
 }
 
 projectSlides.forEach((source, sourceIndex) => {
+  source.dataset.projectInstance = '';
   for (let repeat = -2; repeat <= 2; repeat += 1) {
     if (repeat === 0) {
       projectCopies.push({ element: source, source, repeat });
@@ -657,26 +685,40 @@ projectSlides.forEach((source, sourceIndex) => {
   }
 });
 
+function projectGap(): number {
+  const declared = projectStage ? Number.parseFloat(window.getComputedStyle(projectStage).getPropertyValue('--project-gap')) : Number.NaN;
+  return Number.isFinite(declared) && declared > 0 ? declared : 24;
+}
+
 function projectPitch(): number {
-  const sample = filteredProjectSlides[0];
-  const cardWidth = sample ? Number.parseFloat(window.getComputedStyle(sample).width) || sample.offsetWidth : 380;
-  const gap = projectStage ? Number.parseFloat(window.getComputedStyle(projectStage).getPropertyValue('--project-gap')) || 24 : 24;
-  return cardWidth + gap;
+  const visibleInstance = projectCopies.find(({ element, source }) => filteredProjectSlides.includes(source) && !element.hidden)?.element;
+  const sample = visibleInstance ?? filteredProjectSlides.find((slide) => !slide.hidden) ?? filteredProjectSlides[0] ?? projectSlides[0];
+  const physicalWidth = sample?.getBoundingClientRect().width ?? 0;
+  const cardWidth = physicalWidth > 0 ? physicalWidth : sample ? Number.parseFloat(window.getComputedStyle(sample).width) || sample.offsetWidth : 380;
+  return cardWidth + projectGap();
 }
 
 function renderProjectPositions(): void {
   if (!projectStage) return;
   const count = filteredProjectSlides.length;
   const stageWidth = projectStage.clientWidth;
-  const cardWidth = projectPitch() - (Number.parseFloat(window.getComputedStyle(projectStage).getPropertyValue('--project-gap')) || 24);
+  if (count > 3) {
+    const measuredStep = projectPitch();
+    if (measuredStep > 0 && Math.abs(measuredStep - projectStep) > 0.5) {
+      scaleProjectMotion(projectMotion, measuredStep / projectStep);
+      projectStep = measuredStep;
+    }
+  }
+  const cardWidth = projectStep - projectGap();
   const cycle = count * projectStep;
   const center = stageWidth / 2 - cardWidth / 2;
   const indexBySlide = new Map(filteredProjectSlides.map((slide, index) => [slide, index]));
   const staticLayout = count > 0 && count <= 3;
   projectStage.dataset.static = String(staticLayout);
   projectStage.dataset.count = String(count);
-  const closestIndex = count ? Math.round(projectPhase / projectStep) % count : 0;
-  currentProjectIndex = positiveModulo(closestIndex, Math.max(1, count));
+  projectStage.dataset.cardWidth = String(cardWidth);
+  projectStage.dataset.pitch = String(projectStep);
+  currentProjectIndex = getProjectIndex(projectMotion.phase, projectStep, count);
 
   projectCopies.forEach(({ element, source, repeat }) => {
     const index = indexBySlide.get(source);
@@ -694,7 +736,7 @@ function renderProjectPositions(): void {
       }
       return;
     }
-    const base = positiveModulo(index * projectStep - projectPhase, cycle);
+    const base = positiveModulo(index * projectStep - projectMotion.phase, cycle);
     const x = center + base + repeat * cycle;
     const visible = x < stageWidth && x + cardWidth > 0;
     const inOverscan = x > -cardWidth - projectStep && x < stageWidth + projectStep;
@@ -705,22 +747,62 @@ function renderProjectPositions(): void {
       (source as HTMLElement & { inert: boolean }).inert = !visible;
     }
   });
+  if (staticLayout) {
+    const physicalWidth = filteredProjectSlides[0]?.getBoundingClientRect().width ?? 0;
+    if (physicalWidth > 0) {
+      projectStage.dataset.cardWidth = String(physicalWidth);
+      projectStage.dataset.pitch = String(physicalWidth + projectGap());
+    }
+  } else if (count === 0) {
+    projectStage.dataset.cardWidth = '0';
+    projectStage.dataset.pitch = '0';
+  }
+  updateProjectHighlight();
+}
+
+let projectPointer: { x: number; y: number } | undefined;
+
+function updateProjectHighlight(): void {
+  const stageRect = projectStage?.getBoundingClientRect();
+  const hit = projectPointer && stageRect
+    && projectPointer.x >= stageRect.left && projectPointer.x <= stageRect.right
+    && projectPointer.y >= stageRect.top && projectPointer.y <= stageRect.bottom
+    ? document.elementFromPoint(projectPointer.x, projectPointer.y)?.closest<HTMLElement>('[data-project-instance]')
+    : null;
+  const hovered = hit && projectStage?.contains(hit) && !hit.hidden && stageRect
+    && hit.getBoundingClientRect().right > stageRect.left
+    && hit.getBoundingClientRect().left < stageRect.right
+    && hit.getBoundingClientRect().bottom > stageRect.top
+    && hit.getBoundingClientRect().top < stageRect.bottom
+    ? hit
+    : null;
+  const activeSource = filteredProjectSlides[currentProjectIndex];
+  const centerX = stageRect ? stageRect.left + stageRect.width / 2 : 0;
+  const automatic = projectCopies
+    .filter(({ element, source }) => {
+      if (source !== activeSource || element.hidden || !stageRect) return false;
+      const rect = element.getBoundingClientRect();
+      return rect.right > stageRect.left && rect.left < stageRect.right && rect.bottom > stageRect.top && rect.top < stageRect.bottom;
+    })
+    .sort((a, b) => {
+      const aRect = a.element.getBoundingClientRect();
+      const bRect = b.element.getBoundingClientRect();
+      return Math.abs(aRect.left + aRect.width / 2 - centerX) - Math.abs(bRect.left + bRect.width / 2 - centerX);
+    })[0]?.element;
+  const highlighted = hovered ?? automatic;
+  projectCopies.forEach(({ element }) => { element.dataset.highlighted = String(element === highlighted); });
 }
 
 function projectMotionAllowed(): boolean {
-  return Boolean(projectStage)
-    && filteredProjectSlides.length > 3
-    && !userPausedProjectMotion
-    && !reduceMotion.matches
-    && pauseReasons.size === 0;
+  return isProjectMotionAllowed(projectMotion, filteredProjectSlides.length, reduceMotion.matches, Boolean(projectStage));
 }
 
 function scheduleProjectFrame(): void {
-  const needsFrame = projectMotionAllowed() || Boolean(projectTransition);
+  const needsFrame = projectMotionAllowed() || Boolean(projectMotion.transition);
   if (!needsFrame) {
     if (projectFrame !== undefined) window.cancelAnimationFrame(projectFrame);
     projectFrame = undefined;
-    previousProjectFrame = 0;
+    projectMotion.previousFrame = 0;
     return;
   }
   if (projectFrame === undefined) projectFrame = window.requestAnimationFrame(animateProjectFrame);
@@ -728,19 +810,8 @@ function scheduleProjectFrame(): void {
 
 function animateProjectFrame(timestamp: number): void {
   projectFrame = undefined;
-  const elapsed = previousProjectFrame ? Math.min(48, timestamp - previousProjectFrame) : 0;
-  previousProjectFrame = timestamp;
-  if (projectTransition) {
-    const transition = projectTransition;
-    const progress = Math.min(1, (timestamp - transition.started) / transition.duration);
-    const eased = 1 - Math.pow(1 - progress, 3);
-    projectPhase = transition.from + (transition.to - transition.from) * eased;
-    if (progress >= 1) projectTransition = undefined;
-  } else if (projectMotionAllowed()) {
-    projectPhase += elapsed * 0.088;
-  }
   const cycle = filteredProjectSlides.length * projectStep;
-  if (cycle > 0) projectPhase = positiveModulo(projectPhase, cycle);
+  tickProjectMotion(projectMotion, timestamp, cycle, projectMotionAllowed());
   renderProjectPositions();
   scheduleProjectFrame();
 }
@@ -752,35 +823,44 @@ function renderProjectAnnouncement(): void {
     : translate(locale, 'projects.countMany', { count });
 }
 
-updateProjectState = (announce: boolean): void => {
-  const previousId = filteredProjectSlides[currentProjectIndex]?.dataset.projectId;
-  const progress = positiveModulo(projectPhase, projectStep || 404) / (projectStep || 404);
-  filteredProjectSlides = projectSlides.filter((slide) => currentFilter === 'all' || (slide.dataset.categories ?? '').split(' ').includes(currentFilter));
-  const count = filteredProjectSlides.length;
-  if (projectStage) projectStage.dataset.static = 'false';
-  const measureSlide = filteredProjectSlides[0];
-  if (measureSlide) measureSlide.hidden = false;
-  const nextIndex = filteredProjectSlides.findIndex((slide) => slide.dataset.projectId === previousId);
-  projectStep = projectPitch();
-  if (projectStep <= 0) projectStep = 404;
-  projectPhase = (Math.max(0, nextIndex) + progress) * projectStep;
-  if (count > 0) projectPhase = positiveModulo(projectPhase, count * projectStep);
-  projectTransition = undefined;
+updateProjectState = (announce: boolean, mode: 'filter' | 'resize' | 'render' = 'filter'): void => {
+  if (mode !== 'render') {
+    const previousId = filteredProjectSlides[currentProjectIndex]?.dataset.projectId;
+    const previousStep = projectStep || 404;
+    const previousPosition = projectMotion.phase / previousStep;
+    const centeredIndex = Math.round(previousPosition);
+    const fractionalOffset = previousPosition - centeredIndex;
+    filteredProjectSlides = projectSlides.filter((slide) => currentFilter === 'all' || (slide.dataset.categories ?? '').split(' ').includes(currentFilter));
+    if (projectStage) projectStage.dataset.static = 'false';
+    const measureSlide = filteredProjectSlides[0];
+    if (measureSlide) measureSlide.hidden = false;
+    projectStep = projectPitch();
+    if (projectStep <= 0) projectStep = 404;
+    if (mode === 'resize') {
+      const ratio = projectStep / previousStep;
+      scaleProjectMotion(projectMotion, ratio);
+    } else {
+      const nextIndex = filteredProjectSlides.findIndex((slide) => slide.dataset.projectId === previousId);
+      projectMotion.phase = (Math.max(0, nextIndex) + fractionalOffset) * projectStep;
+      projectMotion.transition = undefined;
+    }
+    if (filteredProjectSlides.length > 0) projectMotion.phase = positiveModulo(projectMotion.phase, filteredProjectSlides.length * projectStep);
+  }
   renderProjectPositions();
   const empty = filteredProjectSlides.length === 0;
   if (projectEmpty) projectEmpty.hidden = !empty;
   if (projectControls) projectControls.hidden = empty || filteredProjectSlides.length <= 3;
   if (projectToggle) {
-    if (projectCarousel) projectCarousel.dataset.userPaused = String(userPausedProjectMotion);
+    if (projectCarousel) projectCarousel.dataset.userPaused = String(projectMotion.userPaused);
     projectToggle.disabled = reduceMotion.matches || filteredProjectSlides.length <= 3;
-    projectToggle.setAttribute('aria-pressed', String(userPausedProjectMotion));
-    const key: MessageKey = reduceMotion.matches ? 'projects.motionUnavailable' : userPausedProjectMotion ? 'projects.play' : 'projects.pause';
+      projectToggle.setAttribute('aria-pressed', String(projectMotion.userPaused));
+      const key: MessageKey = reduceMotion.matches ? 'projects.motionUnavailable' : projectMotion.userPaused ? 'projects.play' : 'projects.pause';
     projectToggle.setAttribute('aria-label', messages[locale][key]);
     projectToggle.title = messages[locale][key];
     projectToggle.dataset.ariaId = messages.id[key];
     projectToggle.dataset.ariaEn = messages.en[key];
-    if (projectPauseIcon) projectPauseIcon.style.display = !reduceMotion.matches && !userPausedProjectMotion ? 'block' : 'none';
-    if (projectPlayIcon) projectPlayIcon.style.display = !reduceMotion.matches && userPausedProjectMotion ? 'block' : 'none';
+      if (projectPauseIcon) projectPauseIcon.style.display = !reduceMotion.matches && !projectMotion.userPaused ? 'block' : 'none';
+      if (projectPlayIcon) projectPlayIcon.style.display = !reduceMotion.matches && projectMotion.userPaused ? 'block' : 'none';
   }
   if (projectPrevious) projectPrevious.disabled = filteredProjectSlides.length <= 3;
   if (projectNext) projectNext.disabled = filteredProjectSlides.length <= 3;
@@ -796,12 +876,14 @@ updateProjectTimer = scheduleProjectFrame;
 function moveProject(direction: number): void {
   if (filteredProjectSlides.length < 2 || !projectStage) return;
   if (reduceMotion.matches) {
-    projectPhase = positiveModulo(projectPhase + direction * projectStep, filteredProjectSlides.length * projectStep);
+    projectMotion.phase = positiveModulo(projectMotion.phase + direction * projectStep, filteredProjectSlides.length * projectStep);
     renderProjectPositions();
     if (projectStatus) projectStatus.textContent = translate(locale, 'projects.position', { index: positiveModulo(currentProjectIndex, filteredProjectSlides.length) + 1, count: filteredProjectSlides.length });
     return;
   }
-  projectTransition = { from: projectPhase, to: projectPhase + direction * projectStep, started: performance.now(), duration: 440 };
+  const now = performance.now();
+  tickProjectMotion(projectMotion, now, filteredProjectSlides.length * projectStep, projectMotionAllowed());
+  beginProjectTransition(projectMotion, direction, projectStep, now, 440);
   if (projectStatus) projectStatus.textContent = translate(locale, 'projects.position', { index: positiveModulo(currentProjectIndex + direction, filteredProjectSlides.length) + 1, count: filteredProjectSlides.length });
   scheduleProjectFrame();
 }
@@ -809,8 +891,8 @@ function moveProject(direction: number): void {
 projectPrevious?.addEventListener('click', () => moveProject(-1));
 projectNext?.addEventListener('click', () => moveProject(1));
 projectToggle?.addEventListener('click', () => {
-  userPausedProjectMotion = !userPausedProjectMotion;
-  updateProjectState(false);
+  toggleProjectPaused(projectMotion);
+  updateProjectState(false, 'render');
 });
 filterButtons.forEach((button) => button.addEventListener('click', () => {
   currentFilter = button.dataset.projectFilter ?? 'all';
@@ -819,7 +901,7 @@ filterButtons.forEach((button) => button.addEventListener('click', () => {
     filter.classList.toggle('is-active', active);
     filter.setAttribute('aria-pressed', String(active));
   });
-  updateProjectState(true);
+  updateProjectState(true, 'filter');
 }));
 projectCarousel?.addEventListener('pointerdown', () => addProjectPauseReason('keyboard-card', false));
 projectCarousel?.addEventListener('focusin', (event) => {
@@ -830,8 +912,9 @@ projectCarousel?.addEventListener('focusin', (event) => {
   if (slide.dataset.active === 'true') return;
   const index = filteredProjectSlides.indexOf(slide);
   if (index >= 0) {
-    currentProjectIndex = index;
-    updateProjectState(false);
+    projectMotion.transition = undefined;
+    projectMotion.phase = index * projectStep;
+    renderProjectPositions();
   }
 });
 projectCarousel?.addEventListener('focusout', (event) => {
@@ -840,13 +923,13 @@ projectCarousel?.addEventListener('focusout', (event) => {
   if (!nextSlide || nextSlide.hidden) addProjectPauseReason('keyboard-card', false);
 });
 bindHorizontalDrag(projectStage, () => {}, (active) => {
-  if (active) projectTransition = undefined;
+  if (active) projectMotion.transition = undefined;
   addProjectPauseReason('drag', active);
 }, '', (delta) => {
-  projectTransition = undefined;
-  projectPhase -= delta;
+  projectMotion.transition = undefined;
+  projectMotion.phase -= delta;
   const cycle = filteredProjectSlides.length * projectStep;
-  if (cycle > 0) projectPhase = positiveModulo(projectPhase, cycle);
+  if (cycle > 0) projectMotion.phase = positiveModulo(projectMotion.phase, cycle);
   renderProjectPositions();
 });
 document.addEventListener('visibilitychange', () => addProjectPauseReason('hidden', document.hidden));
@@ -854,6 +937,15 @@ if (projectCarousel && 'IntersectionObserver' in window) {
   const projectObserver = new IntersectionObserver(([entry]) => addProjectPauseReason('offscreen', !(entry?.isIntersecting ?? false)), { threshold: 0.08 });
   projectObserver.observe(projectCarousel);
 }
+projectStage?.addEventListener('pointermove', (event) => {
+  if (event.pointerType === 'touch') return;
+  projectPointer = { x: event.clientX, y: event.clientY };
+  updateProjectHighlight();
+});
+projectStage?.addEventListener('pointerleave', () => {
+  projectPointer = undefined;
+  updateProjectHighlight();
+});
 
 document.addEventListener('click', (event) => {
   const target = event.target instanceof HTMLElement ? event.target : null;
@@ -879,19 +971,36 @@ const experienceCopies = [...document.querySelectorAll<HTMLElement>('[data-exper
 const experienceStatus = document.querySelector<HTMLElement>('[data-experience-status]');
 const experienceStage = document.querySelector<HTMLElement>('[data-experience-stage]');
 let currentExperienceIndex = 0;
+let experiencePosition = 0;
+let experiencePitch = 0;
+let experienceFrame: number | undefined;
+let experienceTransition: { from: number; to: number; started: number; duration: number } | undefined;
+type ExperienceDrag = { pointerId: number; startX: number; startY: number; startPosition: number; intent: 'pending' | 'horizontal' | 'vertical' };
+let experienceDrag: ExperienceDrag | undefined;
+let experienceSuppressClickUntil = 0;
 
 function updateExperienceState(): void {
   const count = experienceSlides.length;
+  experiencePosition = normalizeCoverflowPosition(experiencePosition, count);
+  currentExperienceIndex = normalizeCoverflowPosition(nearestCoverflowTarget(experiencePosition), count);
   experienceSlides.forEach((slide, index) => {
-    let position = count ? (index - currentExperienceIndex + count) % count : 0;
-    if (position > count / 2) position -= count;
-    const visible = Math.abs(position) <= 2 || count <= 3;
-    const interactive = Math.abs(position) <= 1 || count <= 1;
+    const position = wrapCoverflowOffset(index, experiencePosition, count);
+    const pose = coverflowPose(position);
+    const visible = Math.abs(position) < 2.55 || count <= 3;
+    const interactive = Math.abs(position) < 1.01 || count <= 1;
     slide.hidden = !visible;
-    slide.dataset.position = String(position);
-    slide.dataset.active = String(position === 0);
+    slide.dataset.position = String(Math.round(position));
+    slide.dataset.offset = String(position);
+    slide.dataset.active = String(index === currentExperienceIndex);
     slide.setAttribute('aria-hidden', String(!visible));
     (slide as HTMLElement & { inert: boolean }).inert = !interactive;
+    slide.style.visibility = visible ? 'visible' : 'hidden';
+    slide.style.pointerEvents = interactive ? 'auto' : 'none';
+    slide.style.setProperty('--experience-shift-x', `${pose.xFraction * 100}%`);
+    slide.style.setProperty('--experience-depth', `${pose.z}px`);
+    slide.style.setProperty('--experience-scale', String(pose.scale));
+    slide.style.setProperty('--experience-opacity', String(pose.opacity));
+    slide.style.setProperty('--experience-z', String(pose.zIndex));
   });
   experienceCopies.forEach((copy, index) => {
     const active = index === currentExperienceIndex;
@@ -907,19 +1016,135 @@ function updateExperienceState(): void {
   }
 }
 
+function measureExperiencePitch(): number {
+  if (experiencePitch > 1) return experiencePitch;
+  const count = experienceSlides.length;
+  const active = experienceSlides[currentExperienceIndex];
+  const next = experienceSlides[normalizeCoverflowPosition(currentExperienceIndex + 1, count)];
+  const activeRect = active?.getBoundingClientRect();
+  const nextRect = next?.getBoundingClientRect();
+  const measured = activeRect && nextRect
+    ? Math.abs((activeRect.left + activeRect.width / 2) - (nextRect.left + nextRect.width / 2))
+    : 0;
+  const width = activeRect?.width || experienceStage?.clientWidth || 0;
+  experiencePitch = measured > 12 ? measured : width * 0.62;
+  return experiencePitch;
+}
+
+function cancelExperienceFrame(): void {
+  if (experienceFrame !== undefined) window.cancelAnimationFrame(experienceFrame);
+  experienceFrame = undefined;
+}
+
+function scheduleExperienceFrame(): void {
+  if (experienceFrame === undefined && experienceTransition) experienceFrame = window.requestAnimationFrame(animateExperienceFrame);
+}
+
+function animateExperienceFrame(timestamp: number): void {
+  experienceFrame = undefined;
+  const transition = experienceTransition;
+  if (!transition) return;
+  const progress = Math.min(1, Math.max(0, (timestamp - transition.started) / transition.duration));
+  const eased = 1 - Math.pow(1 - progress, 3);
+  experiencePosition = transition.from + (transition.to - transition.from) * eased;
+  if (progress >= 1) {
+    experiencePosition = transition.to;
+    experienceTransition = undefined;
+  }
+  updateExperienceState();
+  scheduleExperienceFrame();
+}
+
+function settleExperienceTo(targetIndex: number): void {
+  const count = experienceSlides.length;
+  if (count < 2) return;
+  const normalized = normalizeCoverflowPosition(targetIndex, count);
+  const shortestOffset = wrapCoverflowOffset(normalized, experiencePosition, count);
+  const target = experiencePosition + shortestOffset;
+  experienceTransition = { from: experiencePosition, to: target, started: performance.now(), duration: 360 };
+  updateExperienceState();
+  scheduleExperienceFrame();
+}
+
 function moveExperience(direction: number): void {
   if (experienceSlides.length < 2) return;
-  currentExperienceIndex = (currentExperienceIndex + direction + experienceSlides.length) % experienceSlides.length;
+  settleExperienceTo(currentExperienceIndex + direction);
   experienceSlides.forEach((slide) => {
     const disclosure = slide.querySelector<HTMLDetailsElement>('details');
     if (disclosure) disclosure.open = false;
   });
-  updateExperienceState();
 }
-experienceSlides.forEach((slide) => slide.addEventListener('click', () => {
-  const position = Number(slide.dataset.position ?? 0);
-  if (Math.abs(position) === 1) moveExperience(position);
+experienceSlides.forEach((slide) => slide.addEventListener('click', (event) => {
+  if (Date.now() < experienceSuppressClickUntil) {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    return;
+  }
+  const offset = Number(slide.dataset.offset ?? 0);
+  if (Math.abs(offset) > 0.72 && Math.abs(offset) < 1.8) {
+    settleExperienceTo(Number(slide.dataset.experienceIndex ?? experienceSlides.indexOf(slide)));
+  }
 }));
+experienceStage?.addEventListener('pointerdown', (event) => {
+  if (!event.isPrimary || (event.pointerType === 'mouse' && event.button !== 0)) return;
+  if (event.pointerType === 'mouse' && event.detail > 1 && event.cancelable) event.preventDefault();
+  const target = event.target instanceof Element ? event.target : experienceStage;
+  if (target?.closest('summary, input, select, textarea, a, [data-experience-caption]')) return;
+  if (experienceTransition) {
+    animateExperienceFrame(performance.now());
+    experienceTransition = undefined;
+    cancelExperienceFrame();
+  }
+  experiencePitch = 0;
+  experienceDrag = {
+    pointerId: event.pointerId,
+    startX: event.clientX,
+    startY: event.clientY,
+    startPosition: experiencePosition,
+    intent: 'pending',
+  };
+});
+experienceStage?.addEventListener('dragstart', (event) => event.preventDefault());
+experienceStage?.addEventListener('selectstart', (event) => event.preventDefault());
+experienceStage?.addEventListener('pointermove', (event) => {
+  if (!experienceDrag || event.pointerId !== experienceDrag.pointerId) return;
+  const dx = event.clientX - experienceDrag.startX;
+  const dy = event.clientY - experienceDrag.startY;
+  if (experienceDrag.intent === 'pending' && Math.max(Math.abs(dx), Math.abs(dy)) > 6) {
+    experienceDrag.intent = Math.abs(dx) > Math.abs(dy) ? 'horizontal' : 'vertical';
+    if (experienceDrag.intent === 'horizontal') {
+      try { experienceStage?.setPointerCapture(event.pointerId); } catch {}
+      experienceStage?.classList.add('is-dragging');
+    }
+  }
+  if (experienceDrag.intent !== 'horizontal') return;
+  experiencePosition = coverflowPositionFromDrag(experienceDrag.startPosition, dx, measureExperiencePitch());
+  experienceTransition = undefined;
+  updateExperienceState();
+  if (event.cancelable) event.preventDefault();
+});
+
+function finishExperienceDrag(event: PointerEvent, cancel = false): void {
+  const drag = experienceDrag;
+  if (!drag || event.pointerId !== drag.pointerId) return;
+  experienceDrag = undefined;
+  experienceStage?.classList.remove('is-dragging');
+  if (drag.intent === 'horizontal' || (cancel && drag.intent === 'pending')) {
+    experienceSuppressClickUntil = Date.now() + 260;
+    settleExperienceTo(nearestCoverflowTarget(experiencePosition));
+  }
+  if (experienceStage?.hasPointerCapture(event.pointerId)) {
+    try { experienceStage.releasePointerCapture(event.pointerId); } catch {}
+  }
+}
+experienceStage?.addEventListener('pointerup', (event) => finishExperienceDrag(event));
+experienceStage?.addEventListener('pointercancel', (event) => finishExperienceDrag(event, true));
+experienceStage?.addEventListener('lostpointercapture', (event) => finishExperienceDrag(event, true));
+experienceStage?.addEventListener('click', (event) => {
+  if (Date.now() >= experienceSuppressClickUntil) return;
+  event.preventDefault();
+  event.stopImmediatePropagation();
+}, true);
 experienceStage?.addEventListener('keydown', (event) => {
   if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
   if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
@@ -927,15 +1152,12 @@ experienceStage?.addEventListener('keydown', (event) => {
     moveExperience(event.key === 'ArrowLeft' ? -1 : 1);
   } else if (event.key === 'Home') {
     event.preventDefault();
-    currentExperienceIndex = 0;
-    updateExperienceState();
+    settleExperienceTo(0);
   } else if (event.key === 'End') {
     event.preventDefault();
-    currentExperienceIndex = Math.max(0, experienceSlides.length - 1);
-    updateExperienceState();
+    settleExperienceTo(Math.max(0, experienceSlides.length - 1));
   }
 });
-bindHorizontalDrag(experienceStage, (direction) => moveExperience(direction), undefined, 'summary, input, select, textarea, a, [data-experience-caption]');
 
 const credentialTrack = document.querySelector<HTMLElement>('[data-credential-track]');
 const credentialPageElements = [...document.querySelectorAll<HTMLElement>('[data-credential-page]')];
@@ -995,9 +1217,31 @@ document.addEventListener('click', (event) => {
 });
 
 const skillCards = [...document.querySelectorAll<HTMLElement>('[data-skill-card]')];
-let activeSkillId = skillCards[0]?.dataset.skillId ?? '';
+const skillStrip = document.querySelector<HTMLElement>('.skills-strip');
+const skillSelection = { keyboardFocusId: null as string | null, touchSelectionId: null as string | null, pointerHoverId: null as string | null };
+let lastSkillInput: 'keyboard' | 'mouse' | 'touch' | 'pen' = 'keyboard';
+document.addEventListener('keydown', () => { lastSkillInput = 'keyboard'; }, true);
+skillStrip?.addEventListener('pointerdown', (event) => {
+  lastSkillInput = event.pointerType === 'touch' ? 'touch' : event.pointerType === 'pen' ? 'pen' : 'mouse';
+  if (lastSkillInput === 'touch') {
+    skillSelection.keyboardFocusId = null;
+    skillSelection.pointerHoverId = null;
+  }
+  if (lastSkillInput === 'mouse' || lastSkillInput === 'pen') {
+    skillSelection.keyboardFocusId = null;
+    skillSelection.touchSelectionId = null;
+    updateSkillState();
+  }
+});
+skillStrip?.addEventListener('pointerleave', (event) => {
+  if (event.pointerType === 'touch') return;
+  skillSelection.pointerHoverId = null;
+  updateSkillState();
+});
+let activeSkillId = '';
 
 function updateSkillState(): void {
+  activeSkillId = resolveSkillSelection(skillSelection) ?? '';
   skillCards.forEach((card) => {
     const active = card.dataset.skillId === activeSkillId;
     card.dataset.active = String(active);
@@ -1012,8 +1256,8 @@ function updateSkillState(): void {
     }
     const idTitle = title.dataset.copyId ?? title.textContent ?? '';
     const enTitle = title.dataset.copyEn ?? title.textContent ?? '';
-    const idLabel = translate('id', 'skills.expand', { title: idTitle });
-    const enLabel = translate('en', 'skills.expand', { title: enTitle });
+    const idLabel = translate('id', active ? 'skills.collapse' : 'skills.expand', { title: idTitle });
+    const enLabel = translate('en', active ? 'skills.collapse' : 'skills.expand', { title: enTitle });
     button.dataset.ariaId = idLabel;
     button.dataset.ariaEn = enLabel;
     button.setAttribute('aria-label', locale === 'id' ? idLabel : enLabel);
@@ -1022,13 +1266,42 @@ function updateSkillState(): void {
 
 skillCards.forEach((card) => {
   const button = card.querySelector<HTMLButtonElement>('[data-skill-activate]');
-  const activate = () => {
-    activeSkillId = card.dataset.skillId ?? '';
+  const skillId = card.dataset.skillId ?? '';
+  card.addEventListener('pointerenter', (event) => {
+    if (event.pointerType === 'touch') return;
+    lastSkillInput = event.pointerType === 'pen' ? 'pen' : 'mouse';
+    skillSelection.keyboardFocusId = null;
+    skillSelection.touchSelectionId = null;
+    skillSelection.pointerHoverId = skillId;
     updateSkillState();
-  };
-  button?.addEventListener('focus', activate);
-  button?.addEventListener('pointerenter', activate);
-  button?.addEventListener('click', activate);
+  });
+  card.addEventListener('pointerleave', (event) => {
+    if (event.pointerType === 'touch' || skillSelection.pointerHoverId !== skillId) return;
+    skillSelection.pointerHoverId = null;
+    updateSkillState();
+  });
+  button?.addEventListener('focus', () => {
+    if (lastSkillInput !== 'keyboard') return;
+    skillSelection.keyboardFocusId = skillId;
+    updateSkillState();
+  });
+  button?.addEventListener('blur', (event) => {
+    const related = event.relatedTarget instanceof HTMLElement ? event.relatedTarget.closest('[data-skill-activate]') : null;
+    if (related) return;
+    skillSelection.keyboardFocusId = null;
+    updateSkillState();
+  });
+  button?.addEventListener('click', () => {
+    if (lastSkillInput === 'touch') {
+      skillSelection.touchSelectionId = toggleTouchSkillSelection(skillSelection.touchSelectionId, skillId);
+      updateSkillState();
+      return;
+    }
+    if (lastSkillInput === 'keyboard') {
+      skillSelection.keyboardFocusId = skillId;
+      updateSkillState();
+    }
+  });
   button?.addEventListener('keydown', (event) => {
     if (!['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(event.key)) return;
     event.preventDefault();
@@ -1233,15 +1506,63 @@ document.querySelectorAll<HTMLButtonElement>('[data-cv-open]').forEach((button) 
 
 document.querySelectorAll<HTMLAnchorElement>('[data-back-to-top]').forEach((link) => link.addEventListener('click', (event) => {
   event.preventDefault();
-    window.scrollTo({ top: 0, behavior: reduceMotion.matches ? 'auto' : 'smooth' });
+  window.scrollTo({ top: 0, behavior: reduceMotion.matches ? 'auto' : 'smooth' });
   document.querySelector<HTMLElement>('#main-content')?.focus({ preventScroll: true });
 }));
+
+const ambientOrbs = new Map(
+  [...document.querySelectorAll<HTMLElement>('[data-ambient-orb]')].map((orb) => [orb.dataset.ambientOrb ?? '', orb]),
+);
+let ambientFrame: number | undefined;
+
+function renderAmbientGradient(): void {
+  ambientFrame = undefined;
+  const maxScroll = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+  const progress = reduceMotion.matches ? 0.5 : clampScrollProgress(maxScroll ? window.scrollY / maxScroll : 0);
+  const weights = ambientGradientWeights(progress);
+  const positions = ambientOrbPositions(progress);
+  const writeOrb = (name: string, opacity: number, x: number, y: number) => {
+    const orb = ambientOrbs.get(name);
+    if (!orb) return;
+    orb.style.opacity = String(opacity);
+    orb.style.transform = `translate3d(${x}vw, ${y}vh, 0) translate(-50%, -50%) scale(1.08)`;
+  };
+  writeOrb('top-blue', weights.top * 0.7, positions.first.x, positions.first.y);
+  writeOrb('top-warm', weights.top * 0.58, positions.second.x, positions.second.y);
+  writeOrb('middle-teal', weights.middle * 0.52, positions.first.x, positions.first.y);
+  writeOrb('middle-blue', weights.middle * 0.62, positions.second.x, positions.second.y);
+  writeOrb('bottom-blue', weights.bottom * 0.68, positions.first.x, positions.first.y);
+}
+
+function scheduleAmbientGradient(): void {
+  if (ambientFrame === undefined) ambientFrame = window.requestAnimationFrame(renderAmbientGradient);
+}
+
+window.addEventListener('scroll', scheduleAmbientGradient, { passive: true });
+window.addEventListener('resize', scheduleAmbientGradient, { passive: true });
+reduceMotion.addEventListener('change', scheduleAmbientGradient);
+if ('ResizeObserver' in window) {
+  const ambientResizeObserver = new ResizeObserver(scheduleAmbientGradient);
+  ambientResizeObserver.observe(document.documentElement);
+  const mainContent = document.querySelector<HTMLElement>('#main-content');
+  if (mainContent) ambientResizeObserver.observe(mainContent);
+}
+renderAmbientGradient();
 
 updateProjectState(false);
 updateExperienceState();
 window.addEventListener('resize', () => {
-  updateProjectState(false);
+  updateProjectState(false, 'resize');
+  experiencePitch = 0;
   updateExperienceState();
 });
+if ('ResizeObserver' in window && projectSlides.length > 3) {
+  const projectGeometryObserver = new ResizeObserver(() => {
+    if (filteredProjectSlides.length <= 3) return;
+    const measuredStep = projectPitch();
+    if (measuredStep > 0 && Math.abs(measuredStep - projectStep) > 0.5) updateProjectState(false, 'resize');
+  });
+  projectCopies.forEach(({ element }) => projectGeometryObserver.observe(element));
+}
 root.classList.add('js');
 applyLocale(locale);
