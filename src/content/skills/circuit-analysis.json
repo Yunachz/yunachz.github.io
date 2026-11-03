@@ -1,7 +1,30 @@
 {
-  "name": "Analisis rangkaian",
-  "category": "Kelistrikan",
-  "sourcePages": [3],
+  "categoryId": "electrical",
+  "copy": {
+    "id": {
+      "title": "Analisis rangkaian",
+      "shortLabel": "Rangkaian",
+      "summary": "Menganalisis rangkaian listrik sebagai bagian dari pembelajaran teknik elektro.",
+      "imageAlt": "Ilustrasi sementara dengan karakter bergaya anime dalam pencahayaan abstrak."
+    },
+    "en": {
+      "title": "Circuit analysis",
+      "shortLabel": "Circuits",
+      "summary": "Analyzing electrical circuits as part of my electrical engineering studies.",
+      "imageAlt": "Temporary anime-style character illustration in abstract lighting."
+    }
+  },
+  "media": {
+    "src": "/assets/placeholders/gggggg.jpg",
+    "width": 1920,
+    "height": 1080,
+    "kind": "placeholder"
+  },
+  "cvOrder": 5,
+  "projectSlugs": [],
+  "sourcePages": [
+    3
+  ],
   "order": 40,
   "draft": false
 }

@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "astro dev",
     "check": "astro check",
-    "validate-content": "node scripts/validate-content.mjs",
+    "validate-content": "node scripts/validate-v3-content.mjs",
     "test": "node --test",
     "prebuild": "npm run validate-content",
     "build": "astro build",

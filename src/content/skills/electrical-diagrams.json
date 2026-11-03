@@ -1,8 +1,31 @@
 {
-  "name": "Membaca dan menggambar diagram listrik",
-  "category": "Kelistrikan",
-  "context": "Membaca wiring diagram dan menggambar electrical diagram.",
-  "sourcePages": [1, 3],
+  "categoryId": "electrical",
+  "copy": {
+    "id": {
+      "title": "Membaca dan menggambar diagram listrik",
+      "shortLabel": "Diagram",
+      "summary": "Membaca diagram pengawatan dan menggambar diagram listrik.",
+      "imageAlt": "Ilustrasi sementara dengan karakter bergaya anime dalam pencahayaan abstrak."
+    },
+    "en": {
+      "title": "Reading and drawing electrical diagrams",
+      "shortLabel": "Diagrams",
+      "summary": "Reading wiring diagrams and drawing electrical diagrams.",
+      "imageAlt": "Temporary anime-style character illustration in abstract lighting."
+    }
+  },
+  "media": {
+    "src": "/assets/placeholders/gggggg.jpg",
+    "width": 1920,
+    "height": 1080,
+    "kind": "placeholder"
+  },
+  "cvOrder": 2,
+  "projectSlugs": [],
+  "sourcePages": [
+    1,
+    3
+  ],
   "order": 20,
   "draft": false
 }

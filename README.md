@@ -1,25 +1,29 @@
-# Portfolio Muhammad Fajar Sodik
+# Muhammad Fajar Sodik  Portfolio
 
-Portfolio Astro statis untuk `https://yunachz.github.io/`. Konten proyek, profil, serta daftar lain berada di Content Collections, terpisah dari template. HTML utama sudah dirender saat build; JavaScript menambah kontrol tema, menu mobile, filter arsip, dan dialog detail dengan tautan/rute HTML sebagai fallback.
+Portfolio statis berbasis Astro untuk https://yunachz.github.io/. Konten bilingual Indonesia/English disimpan sebagai Markdown dan JSON di src/content/, sedangkan layout serta interaksi berada di src/components/, src/lib/, src/scripts/, dan src/styles/.
 
-Empat foto perangkat diproses menjadi WebP lokal dari file yang sama di repositori publik masing-masing, disertai alt text dan tautan sumber. Portrait dan CV berasal dari aset yang diberikan untuk portfolio. Portfolio tidak membuat riwayat, penerbit/tanggal sertifikat, atau hasil ukur yang belum diberikan.
+Data profil, proyek, keahlian, perangkat lunak, pengalaman, pendidikan, sertifikat, dan kontak berasal dari sumber yang diaudit. Situs mempertahankan nama, nilai GPA 3.72 tanpa skala atau semester, foto profil, kontak, serta CV yang disediakan. Ilustrasi sementara hanya dipakai pada slot media yang belum memiliki dokumentasi visual; alt text menjelaskan batas gambar tersebut.
 
-## Menjalankan lokal
+## Pengembangan lokal
 
 Gunakan Node.js 24 dan npm:
 
-```sh
-npm install
-npm run check
-npm test
-npm run build
-npm run preview
-```
+    npm install
+    npm run validate-content
+    npm run check
+    npm test
+    npm run build
+    npm run preview
 
-Pratinjau produksi lokal berjalan di `http://127.0.0.1:4321/`. Gunakan `docs/CONTENT-GUIDE.md` untuk menambah, mengedit, dan menghapus data tanpa mengubah layout.
+Pratinjau produksi lokal tersedia di http://127.0.0.1:4321/. Untuk struktur data, terjemahan, dan media, baca docs/CONTENT-GUIDE.md.
 
-## Build dan GitHub Pages
+## Struktur
 
-Astro mengeluarkan website ke `dist/`. `.github/workflows/deploy.yml` membangun dan mengunggah hasil build itu ke environment GitHub Pages ketika dijalankan pada branch `main` atau secara manual. Source, panduan, dan data pribadi yang tidak disetujui tidak menjadi isi artifact.
+- src/content/ menyimpan koleksi yang dirender Astro.
+- src/lib/project-categories.json adalah registry label kategori proyek untuk kedua bahasa.
+- src/lib/i18n.ts menyimpan salinan antarmuka ID/EN.
+- public/assets/ menyimpan foto, ilustrasi sementara, ikon software, dan CV.
+- scripts/v3-content-validation.mjs memvalidasi relasi lintas koleksi dan aset lokal.
+- tests/ mengunci fakta baseline yang disetujui serta memastikan penambahan data tidak perlu mengubah renderer.
 
-`astro.config.mjs` saat ini memakai root base (`/`) karena targetnya user site `Yunachz/yunachz.github.io`. Jika deployment diubah menjadi project site, set `base` ke `/<nama-repo>/`; tautan internal, canonical, favicon, sitemap, dan robots menggunakan helper sadar-base.
+Astro menghasilkan file statis di dist/. Konfigurasi saat ini memakai root base untuk user site Yunachz/yunachz.github.io. Workflow GitHub Pages membangun branch main atau dapat dijalankan manual.

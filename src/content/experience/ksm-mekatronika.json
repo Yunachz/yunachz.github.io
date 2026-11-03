@@ -1,15 +1,44 @@
 {
-  "category": "Organisasi",
+  "categoryId": "organization",
   "organization": "KSM Mekatronika",
-  "role": "Electronic Division Staff",
-  "summary": "Belajar desain rangkaian PCB dan praktik komponen elektronik.",
-  "details": [
-    "Belajar membuat desain rangkaian PCB menggunakan Proteus.",
-    "Belajar memasang sensor dan aktuator pada mikrokontroler.",
-    "Belajar teknik soldering dan perancangan komponen."
+  "dates": {
+    "start": "2024-09",
+    "kind": "range",
+    "end": "2025-12"
+  },
+  "copy": {
+    "id": {
+      "category": "Organisasi mahasiswa",
+      "role": "Staf Divisi Elektronik",
+      "summary": "Belajar desain PCB, pemasangan sensor dan aktuator, serta praktik komponen elektronik.",
+      "details": [
+        "Belajar membuat desain rangkaian PCB menggunakan Proteus.",
+        "Belajar memasang sensor dan aktuator pada mikrokontroler.",
+        "Belajar teknik soldering dan perancangan komponen."
+      ],
+      "imageAlt": "Ilustrasi sementara; bukan dokumentasi kegiatan."
+    },
+    "en": {
+      "category": "Student organization",
+      "role": "Electronic Division Staff",
+      "summary": "Learning PCB design, sensor and actuator connections, and practical work with electronic components.",
+      "details": [
+        "Learned to create PCB circuit designs using Proteus.",
+        "Learned to connect sensors and actuators to a microcontroller.",
+        "Learned soldering techniques and component design."
+      ],
+      "imageAlt": "Temporary illustration; not activity documentation."
+    }
+  },
+  "media": {
+    "src": "/assets/placeholders/gggggg.jpg",
+    "width": 1920,
+    "height": 1080,
+    "kind": "placeholder"
+  },
+  "sourcePages": [
+    1
   ],
-  "period": "Sep 2024 – Des 2025",
-  "sourcePages": [1],
   "order": 20,
   "draft": false
 }

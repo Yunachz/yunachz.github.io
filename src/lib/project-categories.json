@@ -1,0 +1,22 @@
+[
+  {
+    "id": "control-systems",
+    "label": { "id": "Sistem Kendali", "en": "Control Systems" },
+    "order": 10
+  },
+  {
+    "id": "iot",
+    "label": { "id": "IoT", "en": "IoT" },
+    "order": 20
+  },
+  {
+    "id": "machine-learning",
+    "label": { "id": "Machine Learning", "en": "Machine Learning" },
+    "order": 30
+  },
+  {
+    "id": "desktop",
+    "label": { "id": "Aplikasi Desktop", "en": "Desktop Apps" },
+    "order": 40
+  }
+]

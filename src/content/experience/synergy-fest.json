@@ -1,14 +1,41 @@
 {
-  "category": "Kepanitiaan",
+  "categoryId": "committee",
   "organization": "Synergy Fest 2025",
-  "role": "PDD Division Staff",
-  "summary": "Membuat materi visual acara dan dokumentasi.",
-  "details": [
-    "Mendesain poster, template live report dan instastory, lanyard, serta template guide book.",
-    "Melakukan dokumentasi acara."
+  "dates": {
+    "start": "2025-10",
+    "kind": "ongoing"
+  },
+  "copy": {
+    "id": {
+      "category": "Kepanitiaan",
+      "role": "Staf Divisi PDD",
+      "summary": "Mengembangkan materi visual acara, dari poster dan media sosial hingga lanyard dan panduan acara.",
+      "details": [
+        "Mendesain poster, template live report dan instastory, lanyard, serta template guide book.",
+        "Melakukan dokumentasi acara."
+      ],
+      "imageAlt": "Ilustrasi sementara; bukan dokumentasi kegiatan."
+    },
+    "en": {
+      "category": "Event committee",
+      "role": "PDD Division Staff",
+      "summary": "Developing event visuals, from posters and social media templates to lanyards and guide-book templates.",
+      "details": [
+        "Designed posters, live-report and Instagram Story templates, lanyards, and guide-book templates.",
+        "Documented the event."
+      ],
+      "imageAlt": "Temporary illustration; not activity documentation."
+    }
+  },
+  "media": {
+    "src": "/assets/placeholders/gggggg.jpg",
+    "width": 1920,
+    "height": 1080,
+    "kind": "placeholder"
+  },
+  "sourcePages": [
+    2
   ],
-  "period": "Okt 2025 – Berjalan",
-  "sourcePages": [2],
   "order": 80,
   "draft": false
 }

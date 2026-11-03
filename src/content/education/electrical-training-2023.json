@@ -1,9 +1,21 @@
 {
-  "category": "Pelatihan nonformal",
+  "categoryId": "nonformal",
   "institution": "Pusat Pelatihan dan Pengembangan Pendidikan Jakarta Timur",
-  "program": "Improving the Competence of Vocational High School Students in the Field of Electrical Engineering Expertise — Class I of 2023",
-  "period": "Agu 2023",
-  "sourcePages": [1, 3],
+  "dates": {
+    "start": "2023-08",
+    "kind": "single"
+  },
+  "copy": {
+    "id": {
+      "program": "Peningkatan Kompetensi Peserta Didik SMK Bidang Keahlian Teknik Kelistrikan — Angkatan I Tahun 2023"
+    },
+    "en": {
+      "program": "Improving the Competence of Vocational High School Students in the Field of Electrical Engineering Expertise — Class I of 2023"
+    }
+  },
+  "sourcePages": [
+    1
+  ],
   "order": 40,
   "draft": false
 }

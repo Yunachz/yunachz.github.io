@@ -1,8 +1,40 @@
 ---
 slug: aquasync-ph-stabilizer
 title: AquaSync pH Stabilizer
-summary: Dokumentasi sistem pemantauan pH berbasis ESP32 dengan pengaturan dua pompa melalui pulse dosing dan hysteresis.
-category: Instrumentasi & Control
+categoryIds:
+  - control-systems
+copy:
+  id:
+    summary: >-
+      Pemantauan pH air berbasis ESP32 dengan dua pompa asam/basa yang diatur
+      melalui pulse dosing dan hysteresis.
+    paragraphs:
+      - >-
+        Sistem ini membaca pH air melalui ESP32 dan mengatur dua pompa asam/basa
+        memakai pulse dosing serta hysteresis. Rancangannya juga mencakup
+        interlock pompa dan kalibrasi sensor.
+      - >-
+        Dashboard Flask menampilkan pembacaan pH dan status aktuator untuk
+        memantau sistem.
+    imageAlt: 'Rangkaian sensor, ESP32, dan pompa pada meja kerja.'
+  en:
+    summary: >-
+      ESP32-based water pH monitoring with acid and base pumps controlled
+      through pulse dosing and hysteresis.
+    paragraphs:
+      - >-
+        The system reads water pH through an ESP32 and controls acid and base
+        pumps using pulse dosing and hysteresis. The design also includes a pump
+        interlock and sensor calibration.
+      - >-
+        A Flask dashboard displays pH readings and actuator status for system
+        monitoring.
+    imageAlt: 'Sensors, an ESP32, and pumps arranged on a workbench.'
+media:
+  src: /assets/projects/aquasync-ph-stabilizer.webp
+  width: 720
+  height: 1280
+  kind: photo
 draft: false
 featured: true
 order: 20
@@ -12,26 +44,16 @@ tags:
   - Pulse Dosing
   - Hysteresis
   - Flask
-cover: assets/projects/aquasync-ph-stabilizer.webp
-alt: Rangkaian sensor, ESP32, dan pompa pada meja kerja; foto dari dokumentasi repositori publik AquaSync.
-coverWidth: 720
-coverHeight: 1280
-repositoryUrl: https://github.com/Yunachz/aquasync-ph-stabilizer
+repositoryUrl: 'https://github.com/Yunachz/aquasync-ph-stabilizer'
 sourceLinks:
-  - label: README
-    url: https://github.com/Yunachz/aquasync-ph-stabilizer/blob/main/README.md
-  - label: Foto prototipe
-    url: https://raw.githubusercontent.com/Yunachz/aquasync-ph-stabilizer/main/docs/images/prototype-1.png
-  - label: Firmware
-    url: https://github.com/Yunachz/aquasync-ph-stabilizer/blob/main/firmware/aquasync_firmware.ino
-  - label: Server Flask
-    url: https://github.com/Yunachz/aquasync-ph-stabilizer/blob/main/server/app.py
+  - labelKey: readme
+    url: 'https://github.com/Yunachz/aquasync-ph-stabilizer/blob/main/README.md'
+  - labelKey: prototype
+    url: >-
+      https://raw.githubusercontent.com/Yunachz/aquasync-ph-stabilizer/main/docs/images/prototype-1.png
+  - labelKey: firmware
+    url: >-
+      https://github.com/Yunachz/aquasync-ph-stabilizer/blob/main/firmware/aquasync_firmware.ino
+  - labelKey: flask
+    url: 'https://github.com/Yunachz/aquasync-ph-stabilizer/blob/main/server/app.py'
 ---
-
-README repositori menjelaskan pemantauan pH air melalui ESP32 dan dua pompa asam/basa yang diatur memakai pulse dosing serta hysteresis. Dokumentasi juga membahas interlock pompa dan kalibrasi sensor.
-
-Sebuah dashboard Flask didokumentasikan untuk menampilkan pembacaan dan status aktuator.
-
-### Batas informasi
-
-Audit dokumentasi ini belum menguji akurasi sensor, waktu stabilisasi, ataupun kualitas dan keamanan air.

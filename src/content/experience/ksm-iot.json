@@ -1,15 +1,43 @@
 {
-  "category": "Organisasi",
+  "categoryId": "organization",
   "organization": "KSM IOT 2025",
-  "role": "Staff Firmware Division",
-  "summary": "Pembelajaran firmware dan komunikasi mikrokontroler.",
-  "details": [
-    "Belajar bahasa pemrograman Python.",
-    "Mempelajari protokol komunikasi pada mikrokontroler.",
-    "Belajar machine learning."
+  "dates": {
+    "start": "2026-02",
+    "kind": "ongoing"
+  },
+  "copy": {
+    "id": {
+      "category": "Organisasi mahasiswa",
+      "role": "Staf Divisi Firmware",
+      "summary": "Mengembangkan pemahaman tentang Python, komunikasi mikrokontroler, dan machine learning.",
+      "details": [
+        "Belajar bahasa pemrograman Python.",
+        "Mempelajari protokol komunikasi pada mikrokontroler.",
+        "Belajar machine learning."
+      ],
+      "imageAlt": "Ilustrasi sementara; bukan dokumentasi kegiatan."
+    },
+    "en": {
+      "category": "Student organization",
+      "role": "Firmware Division Staff",
+      "summary": "Developing an understanding of Python, microcontroller communication, and machine learning.",
+      "details": [
+        "Learning the Python programming language.",
+        "Studying microcontroller communication protocols.",
+        "Learning about machine learning."
+      ],
+      "imageAlt": "Temporary illustration; not activity documentation."
+    }
+  },
+  "media": {
+    "src": "/assets/placeholders/gggggg.jpg",
+    "width": 1920,
+    "height": 1080,
+    "kind": "placeholder"
+  },
+  "sourcePages": [
+    2
   ],
-  "period": "Feb 2026 – Berjalan",
-  "sourcePages": [2],
   "order": 30,
   "draft": false
 }

@@ -1,9 +1,22 @@
 {
-  "category": "Pendidikan formal",
+  "categoryId": "formal",
   "institution": "SMKN 5 Jakarta",
-  "program": "Electrical Power Installation Techniques",
-  "period": "Jul 2022 – Mei 2024",
-  "sourcePages": [1],
+  "dates": {
+    "start": "2022-07",
+    "end": "2024-05",
+    "kind": "range"
+  },
+  "copy": {
+    "id": {
+      "program": "Teknik Instalasi Tenaga Listrik"
+    },
+    "en": {
+      "program": "Electrical Power Installation Techniques"
+    }
+  },
+  "sourcePages": [
+    1
+  ],
   "order": 20,
   "draft": false
 }

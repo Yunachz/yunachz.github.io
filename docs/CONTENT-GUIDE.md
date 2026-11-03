@@ -1,78 +1,84 @@
-# Panduan konten portfolio
+# Panduan konten V3
 
-Konten disimpan sebagai Markdown atau JSON terstruktur di `src/content/`; template Astro membangun HTML statis dari sana. Menambah, mengubah, atau menghapus satu entri proyek tidak mengharuskan perubahan layout. Jangan menambahkan peran, hasil ukur, pendidikan, pengalaman, keahlian, dokumen, atau kontak pribadi yang belum dikonfirmasi dan disetujui.
+Astro membangun halaman dari data Markdown dan JSON di src/content/. Penambahan entri pada koleksi yang sudah ada tidak memerlukan perubahan layout. Setiap teks yang tampil harus tersedia dalam bahasa Indonesia dan Inggris dengan makna yang setara. Jangan menambahkan jabatan, hasil ukur, tingkat kemahiran, penerbit, tanggal, dokumen, atau fakta lain yang belum didukung sumber.
 
-## Menambah atau mengubah proyek
+## Proyek
 
-1. Buat satu file Markdown di `src/content/projects/`, misalnya `pengatur-suhu.md`; nama file bukan URL publik.
-2. Isi frontmatter berdasarkan contoh di bawah dan tulis ringkasan berbasis dokumentasi yang dapat dibaca publik. Tautkan README serta bukti lain yang benar-benar ada.
-3. Entri baru otomatis menjadi draft (`draft: true`), tidak muncul di halaman, archive, filter, sitemap, atau rute publik. Setelah konten diperiksa dan boleh diterbitkan, set `draft: false`.
-4. Gunakan `featured: true` hanya untuk proyek yang ingin ditampilkan di beranda. Batasnya diatur oleh `featuredLimit` pada `src/content/site/settings.json` (default 6, maksimal 6). Entri yang tidak featured tetap ada di archive.
-5. Atur `order` bila urutan tertentu diperlukan; default `100`. Urutan seri dipecahkan memakai slug. Kategori adalah teks bebas dan bisa ditambah tanpa mengubah schema/template.
-6. Jika menambah `cover`, simpan file yang benar-benar berasal dari proyek di `public/assets/projects/`, lalu isi `cover`, `alt`, `coverWidth`, dan `coverHeight` berdasarkan file aslinya. Alt menjelaskan yang terlihat dan dimensi intrinsik menjaga ruang gambar sebelum file tampil. Jika foto berasal dari repositori publik, tambahkan `sourceLinks` berlabel `Foto prototipe` dengan URL file sumber yang tepat. Cover harus menunjuk aset yang ada; jangan memakai foto stok sebagai bukti proyek atau membuat foto/diagram pengganti.
-7. Periksa perubahan dengan `npm run check`, `npm test`, dan `npm run build`; lalu tinjau pratinjau lokal sebelum menerbitkan.
+Buat satu file Markdown di src/content/projects/. Struktur frontmatter ringkas:
 
-```yaml
----
-slug: pengatur-suhu
-title: Nama proyek yang benar
-summary: Ringkasan singkat berdasarkan README atau dokumentasi yang tersedia.
-category: Instrumentasi & Control
-draft: true
-featured: false
-order: 100
-tags:
-  - ESP32
-  - Sensor
-cover: assets/projects/nama.webp
-alt: Tampilan perangkat yang didokumentasikan pada repositori.
-coverWidth: 1280
-coverHeight: 720
-repositoryUrl: https://github.com/Yunachz/nama-repositori
-sourceLinks:
-  - label: README
-    url: https://github.com/Yunachz/nama-repositori/blob/main/README.md
-  - label: Foto prototipe
-    url: https://raw.githubusercontent.com/Yunachz/nama-repositori/main/docs/foto-prototipe.png
----
+    slug: pengatur-suhu
+    title: Nama proyek yang benar
+    categoryIds:
+      - control-systems
+    copy:
+      id:
+        summary: Ringkasan singkat.
+        paragraphs:
+          - Penjelasan berdasarkan dokumentasi proyek.
+        imageAlt: Perangkat yang terlihat pada foto proyek.
+      en:
+        summary: Short summary.
+        paragraphs:
+          - Explanation supported by project documentation.
+        imageAlt: Device shown in the project photograph.
+    media:
+      src: /assets/projects/pengatur-suhu.webp
+      width: 1280
+      height: 720
+      kind: photo
+    draft: true
+    order: 100
+    tags:
+      - ESP32
+    repositoryUrl: https://github.com/Yunachz/nama-repositori
 
-Penjelasan lanjutan dengan batas klaim yang jelas.
-```
+Tambahkan delimiter frontmatter Markdown di awal dan akhir header tersebut. Slug harus unik dan lowercase-kebab-case. Judul wajib nonkosong dan maksimal 88 karakter. categoryIds merujuk ID yang ada di src/lib/project-categories.json; kategori baru perlu label ID/EN di registry. Label kartu, dialog, arsip, dan halaman proyek dihasilkan dari registry tersebut, sehingga project tidak menyimpan categoryLabel duplikat. Jangan memakai label bebas atau memetakan kategori baru ke label lain. Salinan paragraf ID dan EN harus memiliki jumlah yang sama.
 
-Hapus entri dengan menghapus file Markdown terkait. Jalankan semua pemeriksaan lagi agar slug route, archive, dan sitemap diperbarui dalam build berikutnya.
+Proyek baru menjadi draft secara default. Tetapkan draft: false setelah konten dan sumbernya siap untuk ditampilkan. Proyek terbit ditampilkan di carousel dan arsip. featured serta order mengatur urutan; featured tidak membatasi jumlah proyek publik. Tags opsional. repositoryUrl, demoUrl, dan sourceLinks memakai URL HTTPS.
 
-## Skema proyek
+Media bertipe photo harus berasal dari aset proyek di public/assets/projects/. Media bertipe placeholder disimpan di public/assets/placeholders/ dan harus diberi alt text yang menerangkan bahwa ilustrasi bersifat sementara, bukan bukti prototipe. Simpan file terlebih dahulu, lalu isi jalur, lebar, tinggi intrinsik, dan alt text. Gunakan aset lokal; jangan memakai / sebagai src gambar. Untuk mengganti ilustrasi, letakkan foto dokumentasi sebenarnya di direktori koleksi yang sesuai lalu perbarui src, dimensi, kind, dan alt text.
 
-| Field | Aturan |
-| --- | --- |
-| `slug` | Wajib, unik lintas koleksi proyek, huruf kecil/kebab-case; membentuk `/projects/<slug>/`. |
-| `title` | Wajib, teks non-kosong, maksimal 88 karakter. |
-| `summary` | Wajib, teks non-kosong, maksimal 280 karakter; dipakai untuk kartu, detail, dan metadata. |
-| `category` | Wajib, teks bebas non-kosong; nilai kategori, jumlah, dan filter dihitung dari proyek terbit. |
-| `draft` | Default `true`; hanya `false` masuk ke beranda/arsip/filter/count/sitemap dan mendapat halaman detail statis. |
-| `featured` | Default `false`; hanya proyek terbit yang featured ditampilkan di beranda, sampai batas `featuredLimit`. |
-| `order` | Bilangan bulat opsional, default `100`; ascending, lalu slug. |
-| `tags` | Daftar teks opsional, default kosong; gunakan istilah yang disebut dalam dokumentasi proyek. |
-| `repositoryUrl`, `demoUrl` | Opsional; harus URL HTTPS. Tombol/link hilang jika nilainya tidak ada. |
-| `cover`, `alt`, `coverWidth`, `coverHeight` | Opsional; cover harus berada di `public/assets/projects/`, aset harus ada, dan alt serta dimensi intrinsik positif wajib bersama cover. Untuk foto dari repo publik, cantumkan URL file sumber di `sourceLinks` dengan label `Foto prototipe`. |
-| `sourceLinks` | Daftar label dan URL HTTPS opsional untuk README, source, atau bukti publik lainnya. |
+## Koleksi dan field
 
-Schema Astro di `src/content.config.ts` memeriksa struktur/type Markdown dan JSON saat check/build. `scripts/validate-content.mjs` menangani aturan lintas file yang perlu melihat seluruh koleksi: slug duplikat proyek, collision slug section, referensi proyek yang belum terbit, serta path aset lokal.
+| Koleksi | Lokasi | Field utama |
+| --- | --- | --- |
+| Profil dan kontak | src/content/site/*.json | Profile berisi nama, lokasi, GPA, bahasa, salinan ID/EN, portrait, dan cvByLocale. Contact berisi tautan nyata dan email. |
+| Keahlian | src/content/skills/*.json | categoryId, salinan title/shortLabel/summary ID/EN, media, projectSlugs, order, draft. |
+| Software | src/content/software/*.json | name, icon lokal, monogram fallback, order, draft. Nama dan ikon tidak menyatakan tingkat kemahiran atau sertifikasi. |
+| Pengalaman | src/content/experience/*.json | organization, dates, salinan category/role/summary/details/imageAlt ID/EN, media, order, draft. Jumlah detail ID/EN harus sama. |
+| Pendidikan | src/content/education/*.json | institution, dates, salinan program/summary ID/EN, order, draft. Formal dan nonformal dibedakan oleh categoryId. |
+| Sertifikat | src/content/credentials/*.json | name dan media; issuer, issuedAt, verifyUrl, document hanya jika sumber baru mendukungnya. Kartu tidak membuka dialog. |
 
-## Mengelola bagian profil lain
+Semua koleksi berbasis record memakai draft true secara default pada schema, kecuali frontmatter proyek yang menentukan draft dengan default sama. Hanya entri draft false yang tampil. Slug record JSON berasal dari nama file. Urutan default 100; order lebih kecil tampil lebih awal.
 
-- `src/content/site/profile.json` menyimpan nama, bidang, lokasi, ringkasan, GPA, bahasa, portrait, dan CV. `gpa` adalah angka tanpa skala implisit; jangan menambah penyebut atau semester. Portrait lokal berada di `public/assets/profile/` dan memerlukan `photoAlt`, `photoWidth`, serta `photoHeight`. CV lokal berada di `public/assets/documents/`: kontrol membuka dialog pratinjau dan menawarkan buka tab baru/unduh; `href` PDF tetap menjadi fallback saat JavaScript mati.
-- `src/content/site/contact.json` mendukung `github`, `linkedin`, `whatsapp`, `phone` E.164, dan `email`. Tautan tindakan dirender hanya bila kanal berisi data; CTA email menambahkan subjek tawaran proyek yang di-encode.
-- `src/content/site/settings.json` menyimpan `locale`, URL situs, dan `featuredLimit` (default 6, maksimal 6).
-- Section naratif generik adalah satu file Markdown per entri di `src/content/sections/` dengan `title`, `slug`, `order`, dan `draft`. Konten yang terbit dirender oleh template section yang sama di beranda; slug harus unik dan tidak sama dengan anchor halaman.
-- Item keahlian berada di `src/content/skills/*.json`: `name`, `category`, `context`/`projectSlugs`/`sourcePages` opsional, `order` (default `100`), `draft` (default `true`). Kelompok kategori dibentuk dari data, bukan daftar kategori di template. Item terbit hanya boleh menunjuk proyek yang juga terbit.
-- Item pengalaman di `src/content/experience/*.json` memerlukan `category`, `organization`, `role`, dan `summary`; `details`, `period`, serta `sourcePages` opsional. Rincian panjang tetap satu entri dan dibuka melalui dialog; tanpa JavaScript elemen `<details>` menampilkan isi yang sama. Kategori dikelompokkan otomatis.
-- Item pendidikan di `src/content/education/*.json` memerlukan `category`, `institution`, dan `program`; `summary`, `details`, `period`, serta `sourcePages` opsional. Pendidikan formal dan pelatihan nonformal dibedakan oleh nilai kategori, yang membentuk kelompok otomatis.
-- Kredensial di `src/content/credentials/*.json` hanya memerlukan `name`; `category` default `Sertifikasi`, sementara `details`, `issuer`, `issuedAt`, `verifyUrl`, `document`, dan `sourcePage` opsional. Jangan menebak penerbit/tanggal atau membuat tombol tanpa URL/aset nyata. Foto sertifikat opsional: simpan di `public/assets/certificates/`, lalu isi `image`, `imageAlt`, `imageWidth`, dan `imageHeight` bersama-sama. Jika ada, foto thumbnail dan pratinjau dialog memakai entry yang sama dengan `object-fit: contain`; tanpa gambar, tidak ada bingkai kosong.
-- Koleksi profil tersebut memakai default draft sehingga tidak muncul sebelum ditandai `draft: false`. Template menyembunyikan section kosong; CV/email tidak muncul tanpa data.
+Setiap periode memakai dates.start dengan format YYYY-MM. dates.kind adalah range, ongoing, atau single. Hanya range memiliki dates.end. Jangan menyimpulkan tanggal, kelulusan, posisi kerja, atau ketersediaan dari label desain.
 
-Tambahkan satu berkas JSON/Markdown ke koleksi yang sudah ada untuk menambah entri/kategori tanpa mengedit tata letak. Project detail memakai konten koleksi yang sama dengan route SSR sebagai fallback; pengalaman, pendidikan, dan kredensial memakai dialog native dengan `<details>` fallback; kontrol CV dan kontak tetap berupa tautan bila JavaScript mati. Menambahkan jenis data atau perilaku baru—misalnya formulir atau kalkulasi—memerlukan perubahan template, bukan sekadar menambah konten.
+## Media dan CV
 
-## QA konten
+Aset publik berada di public/assets/ dan dipanggil melalui /assets/.... Gunakan direktori yang sesuai:
+- assets/profile/ untuk foto profil nyata.
+- assets/projects/ untuk foto proyek yang benar-benar terdokumentasi.
+- assets/skills/ untuk foto pendukung keahlian yang benar.
+- assets/experience/ untuk foto kegiatan yang benar.
+- assets/certificates/ hanya untuk scan sertifikat yang tersedia.
+- assets/placeholders/ untuk ilustrasi sementara yang bukan bukti.
 
-`npm test` menggunakan fixture sintetis dalam memori (bukan data publik situs) untuk memeriksa 1, 3, 10, dan 30 entri; aturan default; slug invalid/duplikat; asset, alt, dan dimensi cover invalid; sorting; serta pengecualian draft. Hanya berkas yang berada di `src/content/` dipertimbangkan oleh build situs.
+Field media memiliki src, width, height, dan kind (photo atau placeholder). Media keahlian dapat menggunakan copy.imageAlt ID/EN. Pengalaman menggunakan copy.imageAlt; sertifikat menggunakan media.alt dengan alt ID/EN. Pastikan file gambar sudah ada di public sebelum validasi.
+
+Profile.cvByLocale.id dan .en menunjuk dua PDF lokal di public/assets/documents/. English CV juga ada pada profile.cv untuk fallback lama. Viewer memilih PDF berdasarkan pilihan bahasa dokumen, terpisah dari bahasa antarmuka. Jangan mengganti atau menerjemahkan klaim CV tanpa memeriksa sumber.
+
+## Terjemahan antarmuka
+
+Salinan rekaman ada di copy.id dan copy.en. Label tombol, dialog, status, pesan toast, navigasi, dan teks aksesibilitas berada di src/lib/i18n.ts. Saat menambah interaksi, tambahkan kedua terjemahan di sana; simpan message key pada elemen yang perlu diperbarui saat bahasa berubah. Terjemahan harus alami dan setara, tidak perlu mengikuti susunan kata secara literal.
+
+## Menjalankan pemeriksaan
+
+Jalankan perintah berikut saat mengubah data atau perilaku:
+
+    npm run validate-content
+    npm run check
+    npm test
+    npm run build
+    npm run preview
+
+Validator memeriksa registry kategori, salinan bilingual, referensi proyek terbit, tanggal, path/dimensi media, URL, kontak, CV, dan bahasa provenance yang tidak boleh tampil ke publik. Tes regresi mengunci fakta awal sebagai subset sehingga tambahan yang sah tidak memerlukan perubahan ke daftar hitungan tetap. Tes fixture juga memeriksa kategori baru dan metadata opsional yang disertai sumber. Preview perlu ditinjau pada layar lebar dan telepon, dalam bahasa ID/EN serta tema terang/gelap.

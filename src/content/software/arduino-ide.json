@@ -1,0 +1,7 @@
+{
+  "name": "Arduino IDE",
+  "icon": "assets/software/brands/arduino-ide.svg",
+  "monogram": "A",
+  "order": 20,
+  "draft": false
+}

@@ -1,8 +1,31 @@
 {
-  "name": "Editing dan dokumentasi",
-  "category": "Media dan dokumentasi",
-  "context": "Pengalaman kepanitiaan mencakup desain materi acara serta dokumentasi foto dan video.",
-  "sourcePages": [2, 3],
+  "categoryId": "media",
+  "copy": {
+    "id": {
+      "title": "Editing dan dokumentasi",
+      "shortLabel": "Media",
+      "summary": "Membuat materi visual acara serta dokumentasi foto dan video dalam kegiatan kepanitiaan.",
+      "imageAlt": "Ilustrasi sementara dengan karakter bergaya anime dalam pencahayaan abstrak."
+    },
+    "en": {
+      "title": "Editing and documentation",
+      "shortLabel": "Media",
+      "summary": "Creating event visuals and photo and video documentation through committee work.",
+      "imageAlt": "Temporary anime-style character illustration in abstract lighting."
+    }
+  },
+  "media": {
+    "src": "/assets/placeholders/gggggg.jpg",
+    "width": 1920,
+    "height": 1080,
+    "kind": "placeholder"
+  },
+  "cvOrder": 4,
+  "projectSlugs": [],
+  "sourcePages": [
+    2,
+    3
+  ],
   "order": 70,
   "draft": false
 }

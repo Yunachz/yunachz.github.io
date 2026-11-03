@@ -1,8 +1,31 @@
 {
-  "name": "Python",
-  "category": "Pemrograman",
-  "context": "Dipelajari dalam kegiatan KSM IOT 2025.",
-  "sourcePages": [2, 3],
+  "categoryId": "programming",
+  "copy": {
+    "id": {
+      "title": "Python",
+      "shortLabel": "Python",
+      "summary": "Mengembangkan kemampuan pemrograman Python melalui kegiatan KSM IOT 2025.",
+      "imageAlt": "Ilustrasi sementara dengan karakter bergaya anime dalam pencahayaan abstrak."
+    },
+    "en": {
+      "title": "Python",
+      "shortLabel": "Python",
+      "summary": "Developing my Python programming skills through KSM IOT 2025 activities.",
+      "imageAlt": "Temporary anime-style character illustration in abstract lighting."
+    }
+  },
+  "media": {
+    "src": "/assets/placeholders/gggggg.jpg",
+    "width": 1920,
+    "height": 1080,
+    "kind": "placeholder"
+  },
+  "cvOrder": 6,
+  "projectSlugs": [],
+  "sourcePages": [
+    2,
+    3
+  ],
   "order": 60,
   "draft": false
 }

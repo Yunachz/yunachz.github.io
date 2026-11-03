@@ -1,78 +1,17 @@
 ---
 import type { CollectionEntry } from 'astro:content';
-import { sitePath } from '../lib/urls';
 
 type ExperienceEntry = CollectionEntry<'experience'>;
 type EducationEntry = CollectionEntry<'education'>;
 type CredentialEntry = CollectionEntry<'credentials'>;
 type Entry = ExperienceEntry | EducationEntry | CredentialEntry;
 
-interface Props {
-  entry: Entry;
-  kind: 'experience' | 'education' | 'credential';
-}
-
+interface Props { entry: Entry; kind: 'experience' | 'education' | 'credential' }
 const { entry, kind } = Astro.props;
-const title = kind === 'experience' ? (entry as ExperienceEntry).data.organization : kind === 'education' ? (entry as EducationEntry).data.program : (entry as CredentialEntry).data.name;
-const organization = kind === 'experience' ? (entry as ExperienceEntry).data.role : kind === 'education' ? (entry as EducationEntry).data.institution : (entry as CredentialEntry).data.issuer;
-const period = kind === 'credential' ? (entry as CredentialEntry).data.issuedAt : kind === 'experience' ? (entry as ExperienceEntry).data.period : (entry as EducationEntry).data.period;
-const category = kind === 'credential' ? (entry as CredentialEntry).data.category : entry.data.category;
-const summary = kind === 'experience' ? (entry as ExperienceEntry).data.summary : kind === 'education' ? (entry as EducationEntry).data.summary : undefined;
-const details = kind === 'credential' ? (entry as CredentialEntry).data.details : kind === 'experience' ? (entry as ExperienceEntry).data.details : (entry as EducationEntry).data.details;
-const image = kind === 'credential' ? (entry as CredentialEntry).data.image : undefined;
-const imageAlt = kind === 'credential' ? (entry as CredentialEntry).data.imageAlt : undefined;
-const imageWidth = kind === 'credential' ? (entry as CredentialEntry).data.imageWidth : undefined;
-const imageHeight = kind === 'credential' ? (entry as CredentialEntry).data.imageHeight : undefined;
-const verifyUrl = kind === 'credential' ? (entry as CredentialEntry).data.verifyUrl : undefined;
-const documentPath = kind === 'credential' ? (entry as CredentialEntry).data.document : undefined;
-const documentHref = documentPath?.startsWith('https://') ? documentPath : documentPath ? sitePath(documentPath) : undefined;
-const id = entry.id.replace(/[^a-z0-9-]/gi, '-');
+const title = kind === 'experience' ? (entry as ExperienceEntry).data.organization : kind === 'education' ? (entry as EducationEntry).data.institution : (entry as CredentialEntry).data.name;
+const summary = kind === 'experience' ? (entry as ExperienceEntry).data.copy.id.summary : kind === 'education' ? (entry as EducationEntry).data.copy.id.program : undefined;
 ---
-
-<article class={`record-card record-card--${kind}`} data-record-card>
-  <details class="record-card__disclosure" data-record-dialog={id}>
-    <summary class="record-card__summary">
-      {image && (
-        <img
-          class="record-card__thumbnail"
-          src={sitePath(image)}
-          alt={imageAlt ?? ''}
-          width={imageWidth}
-          height={imageHeight}
-          loading="lazy"
-          decoding="async"
-        />
-      )}
-      <span class="record-card__copy">
-        <span class="record-card__title">{title}</span>
-        <span class="record-card__category">{category}</span>
-        {organization && <span class="record-card__organization">{organization}</span>}
-        {period && <span class="record-card__period">{period}</span>}
-        {summary && <span class="record-card__summary-text">{summary}</span>}
-      </span>
-      <span class="record-card__open" aria-hidden="true">↗</span>
-    </summary>
-    <div class="record-card__details" data-record-details>
-      <header class="record-card__detail-header">
-        <p class="record-card__category">{category}</p>
-        <h3 data-dialog-title>{title}</h3>
-        {organization && <p class="record-card__organization">{organization}</p>}
-        {period && <p class="record-card__period">{period}</p>}
-        {summary && <p class="record-card__summary-text">{summary}</p>}
-      </header>
-      {image && (
-        <figure class="credential-preview">
-          <img src={sitePath(image)} alt={imageAlt ?? ''} width={imageWidth} height={imageHeight} loading="lazy" decoding="async" />
-        </figure>
-      )}
-      {details.length > 0 && (
-        <div class="record-card__detail-body">
-          <h4>Rincian</h4>
-          <ul>{details.map((detail) => <li>{detail}</li>)}</ul>
-        </div>
-      )}
-      {verifyUrl && <p class="record-card__actions"><a class="button button--quiet" href={verifyUrl} target="_blank" rel="noopener noreferrer">Buka verifikasi <span aria-hidden="true">↗</span></a></p>}
-      {documentHref && <p class="record-card__actions"><a class="button button--quiet" href={documentHref} target="_blank" rel="noopener noreferrer">Buka dokumen <span aria-hidden="true">↗</span></a></p>}
-    </div>
-  </details>
+<article class={`record-card record-card--${kind}`}>
+  <h3>{title}</h3>
+  {summary && <p>{summary}</p>}
 </article>

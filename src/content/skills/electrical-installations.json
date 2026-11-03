@@ -1,8 +1,29 @@
 {
-  "name": "Instalasi penerangan dan motor listrik",
-  "category": "Kelistrikan",
-  "context": "Praktik instalasi yang disebut dalam ringkasan profil.",
-  "sourcePages": [1],
+  "categoryId": "electrical",
+  "copy": {
+    "id": {
+      "title": "Instalasi penerangan dan motor listrik",
+      "shortLabel": "Instalasi",
+      "summary": "Merangkai instalasi penerangan dan instalasi motor listrik.",
+      "imageAlt": "Ilustrasi sementara dengan karakter bergaya anime dalam pencahayaan abstrak."
+    },
+    "en": {
+      "title": "Lighting and electric motor installations",
+      "shortLabel": "Installations",
+      "summary": "Assembling lighting installations and electric motor installations.",
+      "imageAlt": "Temporary anime-style character illustration in abstract lighting."
+    }
+  },
+  "media": {
+    "src": "/assets/placeholders/gggggg.jpg",
+    "width": 1920,
+    "height": 1080,
+    "kind": "placeholder"
+  },
+  "projectSlugs": [],
+  "sourcePages": [
+    1
+  ],
   "order": 30,
   "draft": false
 }

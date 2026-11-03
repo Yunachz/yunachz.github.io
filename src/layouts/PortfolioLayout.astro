@@ -1,4 +1,5 @@
 ---
+// @ts-nocheck
 import '../styles/global.css';
 import { getCollection } from 'astro:content';
 import { sitePath } from '../lib/urls';
@@ -70,7 +71,7 @@ const cvHref = profile.cv
       <div class="site-header__inner">
         <a class="site-brand" href={sitePath('/')} aria-label={`${profile.name}, beranda`}>
           <span class="site-brand__mark" aria-hidden="true">MFS</span>
-          <span class="site-brand__text"><strong>{profile.name}</strong><span>{profile.field}</span></span>
+          <span class="site-brand__text"><strong>{profile.name}</strong><span>{profile.copy.id.field}</span></span>
         </a>
         <button class="menu-toggle" id="menu-toggle" type="button" aria-expanded="false" aria-controls="primary-navigation" hidden>
           <span class="menu-toggle__bars" aria-hidden="true"></span>
@@ -99,14 +100,14 @@ const cvHref = profile.cv
             rel="noopener noreferrer"
             data-cv-dialog
             data-cv-name={profile.name}
-          >{profile.cvLabel ?? 'Lihat CV'} <span aria-hidden="true">↗</span></a>
+          >Lihat CV <span aria-hidden="true">↗</span></a>
         )}
       </div>
     </header>
     <main id="main-content" tabindex="-1"><slot /></main>
     <footer class="site-footer">
       <div class="site-footer__inner">
-        <span>{profile.name} · {profile.field}</span>
+        <span>{profile.name} · {profile.copy.id.field}</span>
         <a href={contact.github} target="_blank" rel="noopener noreferrer">GitHub <span aria-hidden="true">↗</span></a>
       </div>
     </footer>

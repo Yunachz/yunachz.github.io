@@ -5,41 +5,68 @@ import { z } from 'astro/zod';
 const slug = z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'gunakan slug lowercase-kebab-case');
 const httpsUrl = z.url().refine((value) => value.startsWith('https://'), 'URL harus memakai HTTPS');
 const tags = z.array(z.string().trim().min(1)).default([]);
-const details = z.array(z.string().trim().min(1)).default([]);
+const details = z.array(z.string().trim().min(1));
 const sourcePages = z.array(z.number().int().min(1).max(3)).default([]);
+const localizedText = z.object({
+  id: z.string().trim().min(1),
+  en: z.string().trim().min(1),
+}).strict();
+const media = z.object({
+  src: z.string().trim().min(1),
+  width: z.number().int().positive(),
+  height: z.number().int().positive(),
+  kind: z.enum(['photo', 'placeholder']),
+  alt: localizedText.optional(),
+}).strict();
+const period = z.object({
+  start: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/),
+  kind: z.enum(['range', 'ongoing', 'single']),
+  end: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/).optional(),
+}).strict().superRefine((entry, context) => {
+  if (entry.kind === 'range' && !entry.end) context.addIssue({ code: 'custom', path: ['end'], message: 'end wajib untuk rentang tanggal' });
+  if (entry.kind !== 'range' && entry.end) context.addIssue({ code: 'custom', path: ['end'], message: 'end hanya dipakai untuk rentang tanggal' });
+});
+const projectCopy = z.object({
+  id: z.object({ summary: z.string().trim().min(1), paragraphs: details.min(1), imageAlt: z.string().trim().min(1) }).strict(),
+  en: z.object({ summary: z.string().trim().min(1), paragraphs: details.min(1), imageAlt: z.string().trim().min(1) }).strict(),
+}).strict().superRefine((copy, context) => {
+  if (copy.id.paragraphs.length !== copy.en.paragraphs.length) {
+    context.addIssue({ code: 'custom', path: ['en', 'paragraphs'], message: 'Jumlah paragraf ID dan EN harus sama' });
+  }
+});
+const skillCopy = z.object({
+  id: z.object({ title: z.string().trim().min(1), shortLabel: z.string().trim().min(1), summary: z.string().trim().min(1), imageAlt: z.string().trim().min(1).optional() }).strict(),
+  en: z.object({ title: z.string().trim().min(1), shortLabel: z.string().trim().min(1), summary: z.string().trim().min(1), imageAlt: z.string().trim().min(1).optional() }).strict(),
+}).strict();
+const experienceCopy = z.object({
+  id: z.object({ category: z.string().trim().min(1), role: z.string().trim().min(1), summary: z.string().trim().min(1), details: details.min(1), imageAlt: z.string().trim().min(1) }).strict(),
+  en: z.object({ category: z.string().trim().min(1), role: z.string().trim().min(1), summary: z.string().trim().min(1), details: details.min(1), imageAlt: z.string().trim().min(1) }).strict(),
+}).strict().superRefine((copy, context) => {
+  if (copy.id.details.length !== copy.en.details.length) {
+    context.addIssue({ code: 'custom', path: ['en', 'details'], message: 'Jumlah detail ID dan EN harus sama' });
+  }
+});
+const educationCopy = z.object({
+  id: z.object({ program: z.string().trim().min(1), summary: z.string().trim().min(1).optional() }).strict(),
+  en: z.object({ program: z.string().trim().min(1), summary: z.string().trim().min(1).optional() }).strict(),
+}).strict();
 
 const projects = defineCollection({
   loader: glob({ base: './src/content/projects', pattern: '**/*.md' }),
   schema: z.object({
     slug,
     title: z.string().trim().min(1).max(88),
-    summary: z.string().trim().min(1).max(280),
-    category: z.string().trim().min(1),
+    categoryIds: z.array(slug).min(1),
+    copy: projectCopy,
+    media,
     draft: z.boolean().default(true),
     featured: z.boolean().default(false),
     order: z.number().int().default(100),
     tags,
     repositoryUrl: httpsUrl.optional(),
     demoUrl: httpsUrl.optional(),
-    cover: z.string().trim().min(1).optional(),
-    alt: z.string().trim().min(1).optional(),
-    coverWidth: z.number().int().positive().optional(),
-    coverHeight: z.number().int().positive().optional(),
-    sourceLinks: z.array(z.object({ label: z.string().trim().min(1), url: httpsUrl }).strict()).default([]),
-  }).strict().superRefine((entry, context) => {
-    if (entry.cover && !entry.alt) {
-      context.addIssue({ code: 'custom', path: ['alt'], message: 'alt wajib diisi jika cover ditentukan' });
-    }
-    if (entry.cover && !entry.coverWidth) {
-      context.addIssue({ code: 'custom', path: ['coverWidth'], message: 'coverWidth wajib diisi jika cover ditentukan' });
-    }
-    if (entry.cover && !entry.coverHeight) {
-      context.addIssue({ code: 'custom', path: ['coverHeight'], message: 'coverHeight wajib diisi jika cover ditentukan' });
-    }
-    if (!entry.cover && (entry.coverWidth || entry.coverHeight)) {
-      context.addIssue({ code: 'custom', path: ['cover'], message: 'cover harus diisi jika dimensi cover ditentukan' });
-    }
-  }),
+    sourceLinks: z.array(z.object({ labelKey: slug, url: httpsUrl }).strict()).default([]),
+  }).strict(),
 });
 
 const site = defineCollection({
@@ -48,19 +75,19 @@ const site = defineCollection({
     z.object({
       kind: z.literal('profile'),
       name: z.string().trim().min(1),
-      field: z.string().trim().min(1),
       location: z.string().trim().min(1).optional(),
-      summary: z.string().trim().min(1).optional(),
       gpa: z.number().positive().optional(),
-      languages: z.array(z.object({ name: z.string().trim().min(1), level: z.string().trim().min(1) }).strict()).default([]),
+      languages: z.array(z.object({ id: slug, name: localizedText, level: localizedText }).strict()).default([]),
+      copy: z.object({
+        id: z.object({ field: z.string().trim().min(1), summary: z.string().trim().min(1), cvSummary: z.string().trim().min(1), photoAlt: z.string().trim().min(1) }).strict(),
+        en: z.object({ field: z.string().trim().min(1), summary: z.string().trim().min(1), cvSummary: z.string().trim().min(1), photoAlt: z.string().trim().min(1) }).strict(),
+      }).strict(),
       photo: z.string().trim().min(1).optional(),
-      photoAlt: z.string().trim().min(1).optional(),
       photoWidth: z.number().int().positive().optional(),
       photoHeight: z.number().int().positive().optional(),
       cv: z.string().trim().min(1).optional(),
-      cvLabel: z.string().trim().min(1).optional(),
+      cvByLocale: z.object({ id: z.string().trim().min(1), en: z.string().trim().min(1) }).strict(),
     }).strict().superRefine((entry, context) => {
-      if (entry.photo && !entry.photoAlt) context.addIssue({ code: 'custom', path: ['photoAlt'], message: 'photoAlt wajib diisi jika photo ditentukan' });
       if (entry.photo && !entry.photoWidth) context.addIssue({ code: 'custom', path: ['photoWidth'], message: 'photoWidth wajib diisi jika photo ditentukan' });
       if (entry.photo && !entry.photoHeight) context.addIssue({ code: 'custom', path: ['photoHeight'], message: 'photoHeight wajib diisi jika photo ditentukan' });
       if (!entry.photo && (entry.photoWidth || entry.photoHeight)) context.addIssue({ code: 'custom', path: ['photo'], message: 'photo harus diisi jika dimensi photo ditentukan' });
@@ -95,9 +122,10 @@ const sections = defineCollection({
 const skills = defineCollection({
   loader: glob({ base: './src/content/skills', pattern: '**/*.json' }),
   schema: z.object({
-    name: z.string().trim().min(1),
-    category: z.string().trim().min(1),
-    context: z.string().trim().min(1).optional(),
+    categoryId: slug,
+    copy: skillCopy,
+    media,
+    cvOrder: z.number().int().min(1).max(6).optional(),
     projectSlugs: z.array(slug).default([]),
     sourcePages,
     order: z.number().int().default(100),
@@ -108,12 +136,11 @@ const skills = defineCollection({
 const experience = defineCollection({
   loader: glob({ base: './src/content/experience', pattern: '**/*.json' }),
   schema: z.object({
-    category: z.string().trim().min(1),
+    categoryId: slug,
     organization: z.string().trim().min(1),
-    role: z.string().trim().min(1),
-    summary: z.string().trim().min(1),
-    details,
-    period: z.string().trim().min(1).optional(),
+    dates: period,
+    copy: experienceCopy,
+    media,
     sourcePages,
     order: z.number().int().default(100),
     draft: z.boolean().default(true),
@@ -123,12 +150,10 @@ const experience = defineCollection({
 const education = defineCollection({
   loader: glob({ base: './src/content/education', pattern: '**/*.json' }),
   schema: z.object({
-    category: z.string().trim().min(1),
+    categoryId: slug,
     institution: z.string().trim().min(1),
-    program: z.string().trim().min(1),
-    summary: z.string().trim().min(1).optional(),
-    details,
-    period: z.string().trim().min(1).optional(),
+    dates: period,
+    copy: educationCopy,
     sourcePages,
     order: z.number().int().default(100),
     draft: z.boolean().default(true),
@@ -139,25 +164,26 @@ const credentials = defineCollection({
   loader: glob({ base: './src/content/credentials', pattern: '**/*.json' }),
   schema: z.object({
     name: z.string().trim().min(1),
-    category: z.string().trim().min(1).default('Sertifikasi'),
-    details,
     issuer: z.string().trim().min(1).optional(),
     issuedAt: z.string().trim().min(1).optional(),
     verifyUrl: httpsUrl.optional(),
     document: z.string().trim().min(1).optional(),
-    image: z.string().trim().min(1).optional(),
-    imageAlt: z.string().trim().min(1).optional(),
-    imageWidth: z.number().int().positive().optional(),
-    imageHeight: z.number().int().positive().optional(),
+    media,
     sourcePage: z.number().int().min(1).max(3).optional(),
     order: z.number().int().default(100),
     draft: z.boolean().default(true),
-  }).strict().superRefine((entry, context) => {
-    if (entry.image && !entry.imageAlt) context.addIssue({ code: 'custom', path: ['imageAlt'], message: 'imageAlt wajib diisi jika image ditentukan' });
-    if (entry.image && !entry.imageWidth) context.addIssue({ code: 'custom', path: ['imageWidth'], message: 'imageWidth wajib diisi jika image ditentukan' });
-    if (entry.image && !entry.imageHeight) context.addIssue({ code: 'custom', path: ['imageHeight'], message: 'imageHeight wajib diisi jika image ditentukan' });
-    if (!entry.image && (entry.imageAlt || entry.imageWidth || entry.imageHeight)) context.addIssue({ code: 'custom', path: ['image'], message: 'image harus diisi bersama alt dan dimensi' });
-  }),
+  }).strict(),
 });
 
-export const collections = { projects, site, sections, skills, experience, education, credentials };
+const software = defineCollection({
+  loader: glob({ base: './src/content/software', pattern: '**/*.json' }),
+  schema: z.object({
+    name: z.string().trim().min(1),
+    icon: z.string().trim().min(1),
+    monogram: z.string().trim().min(1).max(8),
+    order: z.number().int().default(100),
+    draft: z.boolean().default(true),
+  }).strict(),
+});
+
+export const collections = { projects, site, sections, skills, experience, education, credentials, software };

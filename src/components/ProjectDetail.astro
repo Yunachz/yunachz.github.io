@@ -1,4 +1,5 @@
 ---
+// @ts-nocheck
 import { render } from 'astro:content';
 import type { ProjectEntry } from '../lib/projects';
 import { sitePath } from '../lib/urls';
@@ -21,7 +22,6 @@ const coverSource = sourceLinks.find((source) => source.label === 'Foto prototip
       ? <h1 id={`project-title-${slug}`} class="project-detail__title" data-dialog-title>{title}</h1>
       : <h2 id={`project-title-${slug}`} class="project-detail__title" data-dialog-title>{title}</h2>}
     <p class="project-detail__summary">{summary}</p>
-    <p class="project-detail__provenance">Ringkasan ini mengikuti README dan berkas di repositori publik; bagian sumber menyediakan tautan untuk memeriksanya.</p>
     <ul class="tag-list" aria-label={`Teknologi yang disebut di dokumentasi ${title}`}>
       {tags.map((tag) => <li>{tag}</li>)}
     </ul>

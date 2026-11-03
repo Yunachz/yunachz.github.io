@@ -1,0 +1,7 @@
+{
+  "name": "TIA Portal",
+  "icon": "assets/software/brands/tia-portal.svg",
+  "monogram": "TIA",
+  "order": 70,
+  "draft": false
+}

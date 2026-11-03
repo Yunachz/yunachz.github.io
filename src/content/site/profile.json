@@ -1,18 +1,52 @@
 {
   "kind": "profile",
   "name": "Muhammad Fajar Sodik",
-  "field": "Electrical Engineering",
   "location": "Jakarta, Indonesia",
-  "summary": "Mahasiswa S1 Teknik Elektro Universitas Pembangunan Nasional Veteran Jakarta dengan pengalaman OJT di Engineering Department ASTON Kemayoran City Hotel. Memiliki kemampuan instalasi penerangan dan motor listrik, pemrograman PLC, serta membaca diagram pengawatan; berminat berkarier di bidang electrical engineering.",
   "gpa": 3.72,
   "languages": [
-    { "name": "Bahasa Indonesia", "level": "Native" },
-    { "name": "Bahasa Inggris", "level": "Basic" }
+    {
+      "id": "indonesian",
+      "name": {
+        "id": "Bahasa Indonesia",
+        "en": "Indonesian"
+      },
+      "level": {
+        "id": "Bahasa ibu",
+        "en": "Native"
+      }
+    },
+    {
+      "id": "english",
+      "name": {
+        "id": "Bahasa Inggris",
+        "en": "English"
+      },
+      "level": {
+        "id": "Dasar",
+        "en": "Basic"
+      }
+    }
   ],
+  "copy": {
+    "id": {
+      "field": "Mahasiswa Teknik Elektro · UPN Veteran Jakarta",
+      "summary": "Saya mendalami instalasi listrik dan sistem kendali melalui proyek, perkuliahan, kegiatan organisasi, dan pengalaman OJT di ASTON Kemayoran City Hotel.",
+      "cvSummary": "Saya mahasiswa Universitas Pembangunan Nasional Veteran Jakarta pada program S1 Teknik Elektro. Saya memiliki pengalaman praktik kerja di Engineering Department ASTON Kemayoran City Hotel. Saya dapat merangkai instalasi penerangan dan motor listrik, menggunakan programmable logic controller (PLC), serta membaca diagram pengawatan. Saya dapat bekerja dalam tim dan menyelesaikan masalah. Saya berminat pada peluang karier di bidang teknik elektro.",
+      "photoAlt": "Muhammad Fajar Sodik mengenakan seragam biru di luar ruangan"
+    },
+    "en": {
+      "field": "Electrical Engineering student · UPN Veteran Jakarta",
+      "summary": "I explore electrical installations and control systems through coursework, projects, student organizations, and on-the-job training at ASTON Kemayoran City Hotel.",
+      "cvSummary": "I am an undergraduate Electrical Engineering student at Universitas Pembangunan Nasional Veteran Jakarta. I have on-the-job training experience in the Engineering Department at ASTON Kemayoran City Hotel. I can assemble lighting and electric motor installations, use programmable logic controllers (PLCs), and read wiring diagrams. I work well in a team and can solve problems. I am interested in career opportunities in electrical engineering.",
+      "photoAlt": "Muhammad Fajar Sodik wearing a blue uniform outdoors"
+    }
+  },
   "photo": "assets/profile/muhammad-fajar-sodik.webp",
-  "photoAlt": "Muhammad Fajar Sodik mengenakan seragam biru di luar ruangan",
   "photoWidth": 853,
   "photoHeight": 1600,
   "cv": "assets/documents/cv-muhammad-fajar-sodik.pdf",
-  "cvLabel": "Lihat CV (PDF)"
+  "cvByLocale": {
+    "id": "assets/documents/cv-muhammad-fajar-sodik-id.pdf",
+    "en": "assets/documents/cv-muhammad-fajar-sodik.pdf"
+  }
 }

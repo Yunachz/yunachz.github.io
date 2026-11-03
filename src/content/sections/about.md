@@ -2,7 +2,7 @@
 title: Tentang
 slug: about
 order: 10
-draft: false
+draft: true
 ---
 
 Saya mahasiswa S1 Teknik Elektro di Universitas Pembangunan Nasional Veteran Jakarta. Minat saya ada pada bidang *electrical engineering*, terutama praktik instalasi listrik dan kendali.

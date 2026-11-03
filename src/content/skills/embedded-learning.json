@@ -1,8 +1,30 @@
 {
-  "name": "Sensor, aktuator, dan mikrokontroler",
-  "category": "Pembelajaran organisasi",
-  "context": "Pembelajaran mencakup pemasangan sensor dan aktuator, soldering, perancangan komponen, serta protokol komunikasi mikrokontroler.",
-  "sourcePages": [1, 2],
+  "categoryId": "learning",
+  "copy": {
+    "id": {
+      "title": "Sensor, aktuator, dan mikrokontroler",
+      "shortLabel": "Embedded",
+      "summary": "Belajar memasang sensor dan aktuator, melakukan soldering, merancang komponen, serta memahami protokol komunikasi mikrokontroler.",
+      "imageAlt": "Ilustrasi sementara dengan karakter bergaya anime dalam pencahayaan abstrak."
+    },
+    "en": {
+      "title": "Sensors, actuators, and microcontrollers",
+      "shortLabel": "Embedded",
+      "summary": "Learning to connect sensors and actuators, solder, design components, and understand microcontroller communication protocols.",
+      "imageAlt": "Temporary anime-style character illustration in abstract lighting."
+    }
+  },
+  "media": {
+    "src": "/assets/placeholders/gggggg.jpg",
+    "width": 1920,
+    "height": 1080,
+    "kind": "placeholder"
+  },
+  "projectSlugs": [],
+  "sourcePages": [
+    1,
+    2
+  ],
   "order": 90,
   "draft": false
 }

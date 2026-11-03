@@ -1,51 +1,57 @@
 ---
 import { getCollection } from 'astro:content';
-import PortfolioLayout from '../../layouts/PortfolioLayout.astro';
-import ProjectCard from '../../components/ProjectCard.astro';
-import { getPublishedProjects } from '../../lib/projects';
+import PortfolioLayout from '../../layouts/PortfolioLayoutV3.astro';
+import { translate } from '../../lib/i18n';
+import { categoryLabelForProject } from '../../lib/project-categories';
 import { sitePath } from '../../lib/urls';
 
-const siteEntries = await getCollection('site');
-const profile = siteEntries.find((entry) => entry.data.kind === 'profile')?.data;
-if (!profile || profile.kind !== 'profile') throw new Error('Profil situs tidak ditemukan.');
-const projects = await getPublishedProjects();
-const categories = [...new Set(projects.map((project) => project.data.category))].sort((a, b) => a.localeCompare(b));
-const categoryCounts = new Map(categories.map((category) => [category, projects.filter((project) => project.data.category === category).length]));
+const projects = (await getCollection('projects')).filter(({ data }) => !data.draft).sort((a, b) => a.data.order - b.data.order);
 const navItems = [
-  { label: 'Tentang', href: sitePath('/#about') },
-  { label: 'Proyek', href: sitePath('/projects/'), current: true },
-  { label: 'Kontak', href: sitePath('/#contact') },
+  { label: translate('id', 'nav.about'), labelEn: translate('en', 'nav.about'), href: '/#about' },
+  { label: translate('id', 'nav.projects'), labelEn: translate('en', 'nav.projects'), href: '/#projects' },
+  { label: translate('id', 'nav.skills'), labelEn: translate('en', 'nav.skills'), href: '/#skills' },
+  { label: translate('id', 'nav.education'), labelEn: translate('en', 'nav.education'), href: '/#education' },
+  { label: translate('id', 'nav.experience'), labelEn: translate('en', 'nav.experience'), href: '/#experience' },
+  { label: translate('id', 'nav.credentials'), labelEn: translate('en', 'nav.credentials'), href: '/#credentials' },
+  { label: translate('id', 'nav.contact'), labelEn: translate('en', 'nav.contact'), href: '/#contact' },
 ];
 ---
 
-<PortfolioLayout
-  title={`Arsip Proyek — ${profile.name}`}
-  description={`Arsip ${projects.length} repositori publik yang dipilih, dengan kategori, ringkasan, dan tautan dokumentasi.`}
-  canonicalPath="/projects/"
-  navItems={navItems}
->
-  <section class="archive-intro content-shell" aria-labelledby="archive-title">
-    <a class="back-link" href={sitePath('/#projects')}>← Kembali ke beranda</a>
-    <h1 id="archive-title">Repositori publik</h1>
-    <p class="archive-intro__summary">Setiap entri merangkum informasi di repositori publik dan menyediakan tautan untuk memeriksa sumbernya.</p>
-    <p class="archive-count" data-project-count aria-live="polite">{projects.length} proyek ditampilkan</p>
-  </section>
-  <div class="filter-wrap content-shell">
-    <div class="filter-bar" data-project-filters role="group" aria-label="Filter proyek menurut kategori" hidden>
-      <button type="button" class="filter-chip" data-category-filter="all" aria-pressed="true">Semua <span>{projects.length}</span></button>
-      {categories.map((category) => (
-        <button type="button" class="filter-chip" data-category-filter={category} aria-pressed="false">{category} <span>{categoryCounts.get(category)}</span></button>
-      ))}
-    </div>
-  </div>
-  <section class="archive-list content-shell" aria-labelledby="archive-list-heading">
-    <h2 class="visually-hidden" id="archive-list-heading">Semua proyek yang dipublikasikan</h2>
-    {projects.length > 0 ? (
-      <div class="project-grid">
-        {projects.map((project) => <ProjectCard project={project} />)}
+<PortfolioLayout title="Semua proyek — Muhammad Fajar Sodik" titleEn="All projects — Muhammad Fajar Sodik" description={translate('id', 'archive.intro')} descriptionEn={translate('en', 'archive.intro')} canonicalPath="/projects/" profileName="Muhammad Fajar Sodik" navItems={navItems}>
+  <section class="section-block content-shell project-archive" aria-labelledby="archive-heading">
+    <a class="text-link" href={sitePath('/')}>
+      <span data-copy-id={translate('id', 'archive.backHome')} data-copy-en={translate('en', 'archive.backHome')}>{translate('id', 'archive.backHome')}</span>
+    </a>
+    <header class="section-heading">
+      <div>
+        <h1 id="archive-heading" data-copy-id={translate('id', 'archive.title')} data-copy-en={translate('en', 'archive.title')}>{translate('id', 'archive.title')}</h1>
+        <p data-copy-id={translate('id', 'archive.intro')} data-copy-en={translate('en', 'archive.intro')}>{translate('id', 'archive.intro')}</p>
       </div>
-    ) : (
-      <p class="empty-note">Belum ada proyek terbit.</p>
-    )}
+    </header>
+    {projects.length ? (
+      <div class="archive-grid">
+        {projects.map(({ data }) => {
+          const categoryLabel = categoryLabelForProject(data.categoryIds);
+          return (
+          <article class="archive-card">
+            <figure>
+              <img src={sitePath(data.media.src)} alt={data.copy.id.imageAlt} data-alt-id={data.copy.id.imageAlt} data-alt-en={data.copy.en.imageAlt} width={data.media.width} height={data.media.height} loading="lazy" decoding="async" />
+            </figure>
+            <div class="archive-card__body">
+              <p class="project-card__category" data-copy-id={categoryLabel.id} data-copy-en={categoryLabel.en}>{categoryLabel.id}</p>
+              <h2>{data.title}</h2>
+              <p class="project-card__summary" data-copy-id={data.copy.id.summary} data-copy-en={data.copy.en.summary}>{data.copy.id.summary}</p>
+              <ul class="tag-list" aria-label={translate('id', 'projects.technologyLabel', { title: data.title })} data-aria-id={translate('id', 'projects.technologyLabel', { title: data.title })} data-aria-en={translate('en', 'projects.technologyLabel', { title: data.title })}>
+                {data.tags.map((tag) => <li>{tag}</li>)}
+              </ul>
+              <a class="button button--quiet" href={sitePath(`/projects/${data.slug}/`)}>
+                <span data-copy-id={translate('id', 'projects.detail')} data-copy-en={translate('en', 'projects.detail')}>{translate('id', 'projects.detail')}</span>
+              </a>
+            </div>
+          </article>
+          );
+        })}
+      </div>
+    ) : <p class="empty-note" data-copy-id={translate('id', 'archive.empty')} data-copy-en={translate('en', 'archive.empty')}>{translate('id', 'archive.empty')}</p>}
   </section>
 </PortfolioLayout>

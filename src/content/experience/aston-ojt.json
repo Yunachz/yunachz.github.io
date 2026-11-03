@@ -1,17 +1,48 @@
 {
-  "category": "OJT",
+  "categoryId": "ojt",
   "organization": "ASTON Kemayoran City Hotel",
-  "role": "Engineering Department (OJT)",
-  "summary": "Praktik kerja di bagian engineering hotel.",
-  "details": [
-    "Melakukan perawatan preventif kamar: membersihkan AC, mengecat ulang bagian dinding yang rusak, grouting lantai, memperbaiki bagian yang rusak, dan mengaplikasikan sealant toilet.",
-    "Menangani keluhan tamu terkait kamar hotel.",
-    "Membantu pekerjaan staf.",
-    "Memeriksa kondisi panel hotel, chiller dan freezer, tekanan gas, serta APAR.",
-    "Melakukan perawatan area hotel saat terjadi kerusakan."
+  "dates": {
+    "start": "2022-10",
+    "kind": "range",
+    "end": "2023-04"
+  },
+  "copy": {
+    "id": {
+      "category": "Praktik kerja",
+      "role": "Engineering Department (OJT)",
+      "summary": "Praktik kerja di bagian engineering hotel, dari perawatan kamar hingga pemeriksaan kondisi peralatan.",
+      "details": [
+        "Melakukan perawatan preventif kamar: membersihkan AC, mengecat ulang bagian dinding yang rusak, grouting lantai, memperbaiki bagian yang rusak, dan mengaplikasikan sealant toilet.",
+        "Menangani keluhan tamu terkait kamar hotel.",
+        "Membantu pekerjaan staf.",
+        "Memeriksa kondisi panel hotel, chiller dan freezer, tekanan gas, serta APAR.",
+        "Melakukan perawatan area hotel saat terjadi kerusakan."
+      ],
+      "imageAlt": "Ilustrasi sementara; bukan dokumentasi kegiatan."
+    },
+    "en": {
+      "category": "On-the-job training",
+      "role": "Engineering Department (OJT)",
+      "summary": "On-the-job training in hotel engineering, from room maintenance to checking equipment conditions.",
+      "details": [
+        "Carried out preventive room maintenance: cleaning air conditioners, repainting damaged wall areas, grouting floors, repairing damaged parts, and applying toilet sealant.",
+        "Handled guest complaints about hotel rooms.",
+        "Assisted staff with their work.",
+        "Checked hotel panels, chillers and freezers, gas pressure, and fire extinguishers.",
+        "Carried out maintenance in hotel areas when damage occurred."
+      ],
+      "imageAlt": "Temporary illustration; not activity documentation."
+    }
+  },
+  "media": {
+    "src": "/assets/placeholders/gggggg.jpg",
+    "width": 1920,
+    "height": 1080,
+    "kind": "placeholder"
+  },
+  "sourcePages": [
+    1
   ],
-  "period": "Okt 2022 – Apr 2023",
-  "sourcePages": [1],
   "order": 10,
   "draft": false
 }

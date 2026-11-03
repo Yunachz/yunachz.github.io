@@ -1,14 +1,42 @@
 {
-  "category": "Kepanitiaan",
+  "categoryId": "committee",
   "organization": "Electrician Gathering 2025",
-  "role": "PDD Division Staff",
-  "summary": "Mendukung materi sosialisasi dan dokumentasi acara.",
-  "details": [
-    "Membuat PowerPoint untuk sosialisasi acara.",
-    "Mengambil foto dan video selama acara untuk dokumentasi."
+  "dates": {
+    "start": "2025-06",
+    "kind": "range",
+    "end": "2025-12"
+  },
+  "copy": {
+    "id": {
+      "category": "Kepanitiaan",
+      "role": "Staf Divisi PDD",
+      "summary": "Menyiapkan materi sosialisasi dan mengabadikan kegiatan lewat foto serta video.",
+      "details": [
+        "Membuat PowerPoint untuk sosialisasi acara.",
+        "Mengambil foto dan video selama acara untuk dokumentasi."
+      ],
+      "imageAlt": "Ilustrasi sementara; bukan dokumentasi kegiatan."
+    },
+    "en": {
+      "category": "Event committee",
+      "role": "PDD Division Staff",
+      "summary": "Preparing event introduction materials and documenting activities through photos and videos.",
+      "details": [
+        "Created PowerPoint presentations to introduce the event.",
+        "Took photos and videos during the event for documentation."
+      ],
+      "imageAlt": "Temporary illustration; not activity documentation."
+    }
+  },
+  "media": {
+    "src": "/assets/placeholders/gggggg.jpg",
+    "width": 1920,
+    "height": 1080,
+    "kind": "placeholder"
+  },
+  "sourcePages": [
+    2
   ],
-  "period": "Jun 2025 – Des 2025",
-  "sourcePages": [2],
   "order": 40,
   "draft": false
 }

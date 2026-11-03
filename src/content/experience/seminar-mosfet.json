@@ -1,14 +1,42 @@
 {
-  "category": "Kepanitiaan",
+  "categoryId": "committee",
   "organization": "Seminar MOSFET 2025",
-  "role": "PDD Division Staff",
-  "summary": "Membuat poster, sertifikat, dan dokumentasi seminar.",
-  "details": [
-    "Mendesain poster dan sertifikat.",
-    "Melakukan dokumentasi acara."
+  "dates": {
+    "start": "2025-10",
+    "kind": "range",
+    "end": "2025-11"
+  },
+  "copy": {
+    "id": {
+      "category": "Kepanitiaan",
+      "role": "Staf Divisi PDD",
+      "summary": "Membuat poster dan sertifikat, serta mendokumentasikan kegiatan seminar.",
+      "details": [
+        "Mendesain poster dan sertifikat.",
+        "Melakukan dokumentasi acara."
+      ],
+      "imageAlt": "Ilustrasi sementara; bukan dokumentasi kegiatan."
+    },
+    "en": {
+      "category": "Event committee",
+      "role": "PDD Division Staff",
+      "summary": "Creating posters and certificates, and documenting the seminar.",
+      "details": [
+        "Designed posters and certificates.",
+        "Documented the event."
+      ],
+      "imageAlt": "Temporary illustration; not activity documentation."
+    }
+  },
+  "media": {
+    "src": "/assets/placeholders/gggggg.jpg",
+    "width": 1920,
+    "height": 1080,
+    "kind": "placeholder"
+  },
+  "sourcePages": [
+    2
   ],
-  "period": "Okt 2025 – Nov 2025",
-  "sourcePages": [2],
   "order": 70,
   "draft": false
 }

@@ -1,15 +1,44 @@
 {
-  "category": "Kepanitiaan",
+  "categoryId": "committee",
   "organization": "Electrical Competition 2025",
-  "role": "Mobile Legends Division Staff",
-  "summary": "Menangani formulir, siaran pertandingan, dan pendampingan peserta.",
-  "details": [
-    "Membuat formulir pendaftaran melalui Google Forms.",
-    "Menjadi caster.",
-    "Mendampingi peserta melalui Discord saat bermain."
+  "dates": {
+    "start": "2025-10",
+    "kind": "range",
+    "end": "2025-12"
+  },
+  "copy": {
+    "id": {
+      "category": "Kepanitiaan",
+      "role": "Staf Divisi Mobile Legends",
+      "summary": "Mendukung pendaftaran, menjadi caster, dan mendampingi peserta melalui Discord saat pertandingan.",
+      "details": [
+        "Membuat formulir pendaftaran melalui Google Forms.",
+        "Menjadi caster.",
+        "Mendampingi peserta melalui Discord saat bermain."
+      ],
+      "imageAlt": "Ilustrasi sementara; bukan dokumentasi kegiatan."
+    },
+    "en": {
+      "category": "Event committee",
+      "role": "Mobile Legends Division Staff",
+      "summary": "Supporting registration, serving as a match commentator, and assisting participants on Discord during matches.",
+      "details": [
+        "Created registration forms using Google Forms.",
+        "Served as a match commentator.",
+        "Assisted participants through Discord during matches."
+      ],
+      "imageAlt": "Temporary illustration; not activity documentation."
+    }
+  },
+  "media": {
+    "src": "/assets/placeholders/gggggg.jpg",
+    "width": 1920,
+    "height": 1080,
+    "kind": "placeholder"
+  },
+  "sourcePages": [
+    2
   ],
-  "period": "Okt 2025 – Des 2025",
-  "sourcePages": [2],
   "order": 90,
   "draft": false
 }

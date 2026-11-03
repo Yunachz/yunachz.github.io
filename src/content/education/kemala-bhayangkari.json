@@ -1,9 +1,22 @@
 {
-  "category": "Pendidikan formal",
+  "categoryId": "formal",
   "institution": "SMK Kemala Bhayangkari 1 Jakarta",
-  "program": "Electrical Power Installation Techniques (One Year)",
-  "period": "Jul 2021 – Jun 2022",
-  "sourcePages": [1],
+  "dates": {
+    "start": "2021-07",
+    "end": "2022-06",
+    "kind": "range"
+  },
+  "copy": {
+    "id": {
+      "program": "Teknik Instalasi Tenaga Listrik (satu tahun)"
+    },
+    "en": {
+      "program": "Electrical Power Installation Techniques (One Year)"
+    }
+  },
+  "sourcePages": [
+    1
+  ],
   "order": 30,
   "draft": false
 }

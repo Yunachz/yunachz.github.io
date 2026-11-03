@@ -1,8 +1,29 @@
 {
-  "name": "Desain rangkaian PCB dengan Proteus",
-  "category": "Pembelajaran organisasi",
-  "context": "Dipelajari dalam KSM Mekatronika.",
-  "sourcePages": [1],
+  "categoryId": "learning",
+  "copy": {
+    "id": {
+      "title": "Desain rangkaian PCB dengan Proteus",
+      "shortLabel": "PCB",
+      "summary": "Belajar mendesain rangkaian PCB menggunakan Proteus dalam kegiatan KSM Mekatronika.",
+      "imageAlt": "Ilustrasi sementara dengan karakter bergaya anime dalam pencahayaan abstrak."
+    },
+    "en": {
+      "title": "PCB circuit design with Proteus",
+      "shortLabel": "PCB",
+      "summary": "Learning to design PCB circuits in Proteus through KSM Mekatronika.",
+      "imageAlt": "Temporary anime-style character illustration in abstract lighting."
+    }
+  },
+  "media": {
+    "src": "/assets/placeholders/gggggg.jpg",
+    "width": 1920,
+    "height": 1080,
+    "kind": "placeholder"
+  },
+  "projectSlugs": [],
+  "sourcePages": [
+    1
+  ],
   "order": 80,
   "draft": false
 }

@@ -1,10 +1,23 @@
 {
-  "category": "Pendidikan formal",
+  "categoryId": "formal",
   "institution": "Universitas Pembangunan Nasional Veteran Jakarta",
-  "program": "S1 Electrical Engineering",
-  "summary": "Mahasiswa program sarjana Teknik Elektro.",
-  "period": "Jul 2024 – Sekarang",
-  "sourcePages": [1],
+  "dates": {
+    "start": "2024-07",
+    "kind": "ongoing"
+  },
+  "copy": {
+    "id": {
+      "program": "S1 Teknik Elektro",
+      "summary": "Mahasiswa program sarjana Teknik Elektro."
+    },
+    "en": {
+      "program": "Undergraduate Electrical Engineering",
+      "summary": "Undergraduate student in Electrical Engineering."
+    }
+  },
+  "sourcePages": [
+    1
+  ],
   "order": 10,
   "draft": false
 }

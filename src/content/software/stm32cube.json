@@ -1,0 +1,7 @@
+{
+  "name": "STM32Cube",
+  "icon": "assets/software/brands/stm32cube.svg",
+  "monogram": "32",
+  "order": 30,
+  "draft": false
+}

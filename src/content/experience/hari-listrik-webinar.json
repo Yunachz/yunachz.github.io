@@ -1,14 +1,42 @@
 {
-  "category": "Kepanitiaan",
+  "categoryId": "committee",
   "organization": "Webinar Nasional Hari Listrik 2025",
-  "role": "PDD Division Staff",
-  "summary": "Membuat materi visual dan dokumentasi webinar.",
-  "details": [
-    "Mendesain sertifikat, plakat, dan template live report.",
-    "Melakukan dokumentasi acara."
+  "dates": {
+    "start": "2025-09",
+    "kind": "range",
+    "end": "2025-11"
+  },
+  "copy": {
+    "id": {
+      "category": "Kepanitiaan",
+      "role": "Staf Divisi PDD",
+      "summary": "Menyiapkan materi visual webinar, termasuk sertifikat, plakat, dan template live report.",
+      "details": [
+        "Mendesain sertifikat, plakat, dan template live report.",
+        "Melakukan dokumentasi acara."
+      ],
+      "imageAlt": "Ilustrasi sementara; bukan dokumentasi kegiatan."
+    },
+    "en": {
+      "category": "Event committee",
+      "role": "PDD Division Staff",
+      "summary": "Preparing webinar visuals, including certificates, plaques, and live-report templates.",
+      "details": [
+        "Designed certificates, plaques, and live-report templates.",
+        "Documented the event."
+      ],
+      "imageAlt": "Temporary illustration; not activity documentation."
+    }
+  },
+  "media": {
+    "src": "/assets/placeholders/gggggg.jpg",
+    "width": 1920,
+    "height": 1080,
+    "kind": "placeholder"
+  },
+  "sourcePages": [
+    2
   ],
-  "period": "Sep 2025 – Nov 2025",
-  "sourcePages": [2],
   "order": 60,
   "draft": false
 }
