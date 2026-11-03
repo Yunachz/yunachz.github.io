@@ -152,6 +152,11 @@ const education = defineCollection({
   schema: z.object({
     categoryId: slug,
     institution: z.string().trim().min(1),
+    logo: z.object({
+      src: z.string().trim().min(1),
+      width: z.number().int().positive(),
+      height: z.number().int().positive(),
+    }).strict().optional(),
     dates: period,
     copy: educationCopy,
     sourcePages,

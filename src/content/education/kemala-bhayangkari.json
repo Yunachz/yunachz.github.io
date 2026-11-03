@@ -1,6 +1,11 @@
 {
   "categoryId": "formal",
   "institution": "SMK Kemala Bhayangkari 1 Jakarta",
+  "logo": {
+    "src": "assets/education/kemala-bhayangkari.png",
+    "width": 254,
+    "height": 258
+  },
   "dates": {
     "start": "2021-07",
     "end": "2022-06",

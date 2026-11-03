@@ -1,6 +1,11 @@
 {
   "categoryId": "formal",
   "institution": "SMKN 5 Jakarta",
+  "logo": {
+    "src": "assets/education/smkn-5-jakarta.png",
+    "width": 418,
+    "height": 478
+  },
   "dates": {
     "start": "2022-07",
     "end": "2024-05",

@@ -68,6 +68,29 @@ test('generic validator accepts authorized content growth and registry-backed ca
   assert.equal(validateV3Content(snapshot).projects, source.projects.filter(({ data }) => data.draft === false).length + 1);
 });
 
+test('education logos are optional, local image assets with positive intrinsic dimensions', () => {
+  const snapshot = cloneSource();
+  const upnvj = snapshot.education.find(({ id }) => id === 'upnvj');
+  assert.deepEqual(upnvj?.data.logo, {
+    src: 'assets/education/upnvj.png',
+    width: 520,
+    height: 520,
+  });
+  assert.equal(validateV3Content(snapshot).education, source.education.filter(({ data }) => data.draft === false).length);
+
+  const invalid = cloneSource();
+  const entry = invalid.education.find(({ id }) => id === 'upnvj');
+  if (!entry) throw new Error('UPNVJ fixture is missing.');
+  entry.data.logo.width = 0;
+  assert.throws(() => validateV3Content(invalid), /logo memerlukan dimensi positif/);
+
+  const external = cloneSource();
+  const externalEntry = external.education.find(({ id }) => id === 'upnvj');
+  if (!externalEntry) throw new Error('UPNVJ fixture is missing.');
+  externalEntry.data.logo.src = 'https://example.com/logo.png';
+  assert.throws(() => validateV3Content(external), /logo.src harus berada di public\/assets/);
+});
+
 test('generic validator rejects unknown project categories and published references to drafts', () => {
   const unknownCategory = cloneSource();
   const project = structuredClone(unknownCategory.projects[0]);

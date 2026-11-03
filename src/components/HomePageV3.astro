@@ -2,6 +2,7 @@
 import { getCollection } from 'astro:content';
 import PortfolioLayout from '../layouts/PortfolioLayoutV3.astro';
 import { categoriesForProjects, categoryLabelForProject } from '../lib/project-categories';
+import { chunkRecords } from '../lib/credential-pagination';
 import { translate } from '../lib/i18n';
 import { sitePath } from '../lib/urls';
 
@@ -13,12 +14,13 @@ if (!profile || profile.kind !== 'profile' || !contact || contact.kind !== 'cont
   throw new Error('Profile, contact, and site settings are required.');
 }
 
-const projectCollection = (await getCollection('projects')).filter(({ data }) => !data.draft).sort((a, b) => a.data.order - b.data.order);
-const skills = (await getCollection('skills')).filter(({ data }) => !data.draft).sort((a, b) => a.data.order - b.data.order);
-const experience = (await getCollection('experience')).filter(({ data }) => !data.draft).sort((a, b) => a.data.order - b.data.order);
-const education = (await getCollection('education')).filter(({ data }) => !data.draft).sort((a, b) => a.data.order - b.data.order);
-const credentials = (await getCollection('credentials')).filter(({ data }) => !data.draft).sort((a, b) => a.data.order - b.data.order);
-const software = (await getCollection('software')).filter(({ data }) => !data.draft).sort((a, b) => a.data.order - b.data.order);
+const projectCollection = (await getCollection('projects')).filter(({ data }) => !data.draft).sort((a, b) => a.data.order - b.data.order || a.data.slug.localeCompare(b.data.slug));
+const skills = (await getCollection('skills')).filter(({ data }) => !data.draft).sort((a, b) => a.data.order - b.data.order || a.id.localeCompare(b.id));
+const experience = (await getCollection('experience')).filter(({ data }) => !data.draft).sort((a, b) => a.data.order - b.data.order || a.id.localeCompare(b.id));
+const education = (await getCollection('education')).filter(({ data }) => !data.draft).sort((a, b) => a.data.order - b.data.order || a.id.localeCompare(b.id));
+const credentials = (await getCollection('credentials')).filter(({ data }) => !data.draft).sort((a, b) => a.data.order - b.data.order || a.id.localeCompare(b.id));
+const software = (await getCollection('software')).filter(({ data }) => !data.draft).sort((a, b) => a.data.order - b.data.order || a.id.localeCompare(b.id));
+const credentialPages = chunkRecords(credentials);
 const categories = categoriesForProjects(projectCollection.map(({ data }) => data));
 const formalEducation = education.filter(({ data }) => data.categoryId === 'formal');
 const nonformalEducation = education.filter(({ data }) => data.categoryId === 'nonformal');
@@ -55,6 +57,8 @@ const profileLanguagesId = profileLanguages.map(({ id: value }) => value).join('
 const profileLanguagesEn = profileLanguages.map(({ en: value }) => value).join(' / ');
 const profileGpaId = profile.gpa?.toFixed(2).replace('.', ',') ?? '';
 const profileGpaEn = profile.gpa?.toFixed(2) ?? '';
+const projectCountId = projectCollection.length === 1 ? id('projects.countOne') : id('projects.countMany', { count: projectCollection.length });
+const projectCountEn = projectCollection.length === 1 ? en('projects.countOne') : en('projects.countMany', { count: projectCollection.length });
 
 const navItems = [
   { key: 'nav.about', href: '#about' },
@@ -83,7 +87,7 @@ const navItems = [
       <p class="hero__intro" {...copyAttrs(profile.copy.id.summary, profile.copy.en.summary)}>{profile.copy.id.summary}</p>
       <div class="hero__facts" aria-label="Fakta singkat tentang Fajar" data-aria-id="Fakta singkat tentang Fajar" data-aria-en="A few facts about Fajar">
         <div class="hero-fact">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.2 5.3 5.8.4-4.4 3.8 1.4 5.6L12 15l-5 3.1 1.4-5.6L4 8.7l5.8-.4L12 3Z"/></svg>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 2 3 3 6 3s6-1 6-3v-5"/></svg>
           <span class="hero-fact__label" {...copyAttrs(id('facts.gpaLabel'), en('facts.gpaLabel'))}>{id('facts.gpaLabel')}</span>
           <strong class="hero-fact__value" {...copyAttrs(profileGpaId, profileGpaEn)}>{profileGpaId}</strong>
         </div>
@@ -142,12 +146,30 @@ const navItems = [
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg>
       </a>
     </header>
-    <div class="project-filters" role="group" aria-label={id('projects.filterLabel')} data-aria-id={id('projects.filterLabel')} data-aria-en={en('projects.filterLabel')}>
-      <button type="button" class="filter-chip is-active" data-project-filter="all" aria-pressed="true" disabled {...copyAttrs(id('projects.all'), en('projects.all'))}>{id('projects.all')}</button>
-      {categories.map((category) => (
-        <button type="button" class="filter-chip" data-project-filter={category.id} aria-pressed="false" disabled {...copyAttrs(category.label.id, category.label.en)}>{category.label.id}</button>
-      ))}
+    <div class="project-toolbar">
+      <div class="project-filters" role="group" aria-label={id('projects.filterLabel')} data-aria-id={id('projects.filterLabel')} data-aria-en={en('projects.filterLabel')}>
+        <button type="button" class="filter-chip is-active" data-project-filter="all" aria-pressed="true" disabled {...copyAttrs(id('projects.all'), en('projects.all'))}>{id('projects.all')}</button>
+        {categories.map((category) => (
+          <button type="button" class="filter-chip" data-project-filter={category.id} aria-pressed="false" disabled {...copyAttrs(category.label.id, category.label.en)}>{category.label.id}</button>
+        ))}
+      </div>
+      <div class="project-toolbar__controls">
+        <span class="project-count" data-project-count {...copyAttrs(projectCountId, projectCountEn)}>{projectCountId}</span>
+        <div class="carousel-controls" data-project-controls hidden>
+          <button class="icon-button" type="button" data-project-previous aria-label={id('projects.previous')} data-aria-id={id('projects.previous')} data-aria-en={en('projects.previous')}>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+          </button>
+          <button class="icon-button" type="button" data-project-toggle aria-label={id('projects.pause')} data-aria-id={id('projects.pause')} data-aria-en={en('projects.pause')} aria-pressed="false">
+            <svg data-icon-pause viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg>
+            <svg data-icon-play viewBox="0 0 24 24" aria-hidden="true" style="display: none"><path d="m8 5 11 7-11 7z"/></svg>
+          </button>
+          <button class="icon-button" type="button" data-project-next aria-label={id('projects.next')} data-aria-id={id('projects.next')} data-aria-en={en('projects.next')}>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+          </button>
+        </div>
+      </div>
     </div>
+    <p class="visually-hidden" data-project-status role="status" aria-live="polite"></p>
     <div class="project-carousel" data-project-carousel data-user-paused="false">
       <div class="project-carousel__stage" data-project-stage role="region" aria-roledescription="carousel" aria-label={id('projects.galleryLabel')} data-aria-id={id('projects.galleryLabel')} data-aria-en={en('projects.galleryLabel')}>
         {projectCollection.map((project, index) => {
@@ -166,7 +188,7 @@ const navItems = [
             url: sitePath(`/projects/${data.slug}/`),
           });
           return (
-            <article class="project-slide" data-project-slide data-project-payload={payload} data-categories={data.categoryIds.join(' ')} data-position={index}>
+            <article class="project-slide" data-project-slide data-project-id={data.slug} data-project-payload={payload} data-categories={data.categoryIds.join(' ')} data-position={index}>
               <a class="project-card" href={sitePath(`/projects/${data.slug}/`)} data-project-open {...ariaAttrs(id('projects.openDetail', { title: data.title }), en('projects.openDetail', { title: data.title }))} aria-label={id('projects.openDetail', { title: data.title })}>
                 <figure class="project-card__media">
                   <img
@@ -195,19 +217,6 @@ const navItems = [
           );
         })}
       </div>
-      <div class="carousel-controls" data-project-controls hidden>
-        <button class="icon-button" type="button" data-project-previous aria-label={id('projects.previous')} data-aria-id={id('projects.previous')} data-aria-en={en('projects.previous')}>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
-        </button>
-        <button class="icon-button" type="button" data-project-toggle aria-label={id('projects.pause')} data-aria-id={id('projects.pause')} data-aria-en={en('projects.pause')} aria-pressed="false">
-          <svg data-icon-pause viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg>
-          <svg data-icon-play viewBox="0 0 24 24" aria-hidden="true" style="display: none"><path d="m8 5 11 7-11 7z"/></svg>
-        </button>
-        <button class="icon-button" type="button" data-project-next aria-label={id('projects.next')} data-aria-id={id('projects.next')} data-aria-en={en('projects.next')}>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
-        </button>
-      </div>
-      <p class="carousel-status" role="status" aria-live="polite" data-project-status>{id('projects.countMany', { count: projectCollection.length })}</p>
       <p class="empty-note" data-project-empty hidden {...copyAttrs(id('projects.empty'), en('projects.empty'))}>{id('projects.empty')}</p>
     </div>
   </section>
@@ -224,7 +233,7 @@ const navItems = [
       <button type="button" role="tab" id="software-tab" aria-controls="software-panel" aria-selected="false" tabindex="-1" data-skill-tab="software" hidden {...copyAttrs(id('software.tab'), en('software.tab'))}>{id('software.tab')}</button>
     </div>
     <div class="skills-panel" id="skills-panel" role="tabpanel" aria-labelledby="skills-tab" data-skill-panel="skills">
-      <div class="skills-strip" data-skills-strip>
+      <div class="skills-strip" data-skills-strip data-skill-count={skills.length}>
         {skills.map((skill, index) => (
           <article class="skill-card" data-skill-card data-skill-id={skill.id} data-active={index === 0 ? 'true' : 'false'} style={`--skill-art: url('${sitePath(skill.data.media.src)}')`}>
             <button class="skill-card__button" type="button" data-skill-activate disabled aria-expanded={index === 0 ? 'true' : 'false'} aria-controls={`skill-copy-${skill.id}`} aria-label={id('skills.expand', { title: skill.data.copy.id.title })} data-aria-id={id('skills.expand', { title: skill.data.copy.id.title })} data-aria-en={en('skills.expand', { title: skill.data.copy.en.title })}>
@@ -265,12 +274,14 @@ const navItems = [
         <h3 id="formal-heading" {...copyAttrs(id('education.formal'), en('education.formal'))}>{id('education.formal')}</h3>
         <ol class="education-timeline">
           {formalEducation.map((entry) => (
-            <li class="education-entry">
+            <li class="education-entry" data-has-logo={String(Boolean(entry.data.logo))}>
               <span class="education-entry__dot" aria-hidden="true"></span>
-              <div>
+              {entry.data.logo && <img class="education-entry__logo" src={sitePath(entry.data.logo.src)} alt="" aria-hidden="true" width={entry.data.logo.width} height={entry.data.logo.height} loading="lazy" decoding="async" />}
+              <div class="education-entry__content">
                 <p class="education-entry__period" {...copyAttrs(periodLabel(entry.data.dates, 'id'), periodLabel(entry.data.dates, 'en'))}>{periodLabel(entry.data.dates, 'id')}</p>
                 <h4>{entry.data.institution}</h4>
                 <p class="education-entry__program" {...copyAttrs(entry.data.copy.id.program, entry.data.copy.en.program)}>{entry.data.copy.id.program}</p>
+                {entry.data.copy.id.summary && entry.data.copy.en.summary && <p class="education-entry__summary" {...copyAttrs(entry.data.copy.id.summary, entry.data.copy.en.summary)}>{entry.data.copy.id.summary}</p>}
               </div>
             </li>
           ))}
@@ -280,12 +291,14 @@ const navItems = [
         <h3 id="nonformal-heading" {...copyAttrs(id('education.nonformal'), en('education.nonformal'))}>{id('education.nonformal')}</h3>
         <ol class="education-timeline">
           {nonformalEducation.map((entry) => (
-            <li class="education-entry">
+            <li class="education-entry" data-has-logo={String(Boolean(entry.data.logo))}>
               <span class="education-entry__dot" aria-hidden="true"></span>
-              <div>
+              {entry.data.logo && <img class="education-entry__logo" src={sitePath(entry.data.logo.src)} alt="" aria-hidden="true" width={entry.data.logo.width} height={entry.data.logo.height} loading="lazy" decoding="async" />}
+              <div class="education-entry__content">
                 <p class="education-entry__period" {...copyAttrs(periodLabel(entry.data.dates, 'id'), periodLabel(entry.data.dates, 'en'))}>{periodLabel(entry.data.dates, 'id')}</p>
                 <h4>{entry.data.institution}</h4>
                 <p class="education-entry__program" {...copyAttrs(entry.data.copy.id.program, entry.data.copy.en.program)}>{entry.data.copy.id.program}</p>
+                {entry.data.copy.id.summary && entry.data.copy.en.summary && <p class="education-entry__summary" {...copyAttrs(entry.data.copy.id.summary, entry.data.copy.en.summary)}>{entry.data.copy.id.summary}</p>}
               </div>
             </li>
           ))}
@@ -302,60 +315,77 @@ const navItems = [
       </div>
     </header>
     <div class="experience-gallery" data-experience-gallery>
-      <div class="experience-gallery__stage" data-experience-stage role="region" aria-roledescription="carousel" aria-label={id('experience.galleryLabel')} data-aria-id={id('experience.galleryLabel')} data-aria-en={en('experience.galleryLabel')}>
+      <div class="experience-gallery__stage" data-experience-stage role="region" tabindex="0" aria-roledescription="carousel" aria-label={id('experience.galleryLabel')} data-aria-id={id('experience.galleryLabel')} data-aria-en={en('experience.galleryLabel')}>
         {experience.map((entry, index) => (
-          <article class="experience-slide" data-experience-slide data-position={index}>
-            <figure class="experience-slide__image">
-              <img src={sitePath(entry.data.media.src)} alt={entry.data.copy.id.imageAlt} data-alt-id={entry.data.copy.id.imageAlt} data-alt-en={entry.data.copy.en.imageAlt} width={entry.data.media.width} height={entry.data.media.height} loading={index === 0 ? 'eager' : 'lazy'} decoding="async" />
-              <button class="experience-slide__jump" type="button" data-experience-jump data-gallery-drag-zone aria-label={id('experience.next')} data-aria-id={id('experience.next')} data-aria-en={en('experience.next')} hidden>
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
-              </button>
-            </figure>
-            <div class="experience-slide__copy">
-              <p class="experience-slide__category" {...copyAttrs(entry.data.copy.id.category, entry.data.copy.en.category)}>{entry.data.copy.id.category}</p>
-              <h3>{entry.data.organization}</h3>
-              <div class="experience-slide__meta">
-                <p {...copyAttrs(entry.data.copy.id.role, entry.data.copy.en.role)}>{entry.data.copy.id.role}</p>
-                <time {...copyAttrs(periodLabel(entry.data.dates, 'id'), periodLabel(entry.data.dates, 'en'))}>{periodLabel(entry.data.dates, 'id')}</time>
-              </div>
-              <p class="experience-slide__summary" {...copyAttrs(entry.data.copy.id.summary, entry.data.copy.en.summary)}>{entry.data.copy.id.summary}</p>
-              <details class="experience-slide__activities">
-                <summary data-copy-id={`${id('experience.showActivities')} · ${entry.data.copy.id.details.length}`} data-copy-en={`${en('experience.showActivities')} · ${entry.data.copy.en.details.length}`}>{id('experience.showActivities')} · {entry.data.copy.id.details.length}</summary>
-                <h4 {...copyAttrs(id('experience.activities'), en('experience.activities'))}>{id('experience.activities')}</h4>
-                <ul>{entry.data.copy.id.details.map((detail, detailIndex) => <li data-copy-id={detail} data-copy-en={entry.data.copy.en.details[detailIndex]}>{detail}</li>)}</ul>
-              </details>
+          <button class="experience-slide" type="button" data-experience-slide data-gallery-drag-zone data-experience-index={index} data-position={index} aria-label={id('experience.openItem', { title: entry.data.organization })} data-aria-id={id('experience.openItem', { title: entry.data.organization })} data-aria-en={en('experience.openItem', { title: entry.data.organization })}>
+            <img src={sitePath(entry.data.media.src)} alt={entry.data.copy.id.imageAlt} data-alt-id={entry.data.copy.id.imageAlt} data-alt-en={entry.data.copy.en.imageAlt} width={entry.data.media.width} height={entry.data.media.height} loading={index === 0 ? 'eager' : 'lazy'} decoding="async" />
+          </button>
+        ))}
+      </div>
+      <div class="experience-caption" data-experience-caption>
+        {experience.map((entry, index) => (
+          <article class="experience-slide__copy" data-experience-copy data-experience-copy-index={index}>
+            <p class="experience-slide__category" {...copyAttrs(entry.data.copy.id.category, entry.data.copy.en.category)}>{entry.data.copy.id.category}</p>
+            <h3>{entry.data.organization}</h3>
+            <div class="experience-slide__meta">
+              <p {...copyAttrs(entry.data.copy.id.role, entry.data.copy.en.role)}>{entry.data.copy.id.role}</p>
+              <time {...copyAttrs(periodLabel(entry.data.dates, 'id'), periodLabel(entry.data.dates, 'en'))}>{periodLabel(entry.data.dates, 'id')}</time>
             </div>
+            <p class="experience-slide__summary" {...copyAttrs(entry.data.copy.id.summary, entry.data.copy.en.summary)}>{entry.data.copy.id.summary}</p>
+            <details class="experience-slide__activities">
+              <summary data-copy-id={`${id('experience.showActivities')} · ${entry.data.copy.id.details.length}`} data-copy-en={`${en('experience.showActivities')} · ${entry.data.copy.en.details.length}`}>{id('experience.showActivities')} · {entry.data.copy.id.details.length}</summary>
+              <h4 {...copyAttrs(id('experience.activities'), en('experience.activities'))}>{id('experience.activities')}</h4>
+              <ul>{entry.data.copy.id.details.map((detail, detailIndex) => <li data-copy-id={detail} data-copy-en={entry.data.copy.en.details[detailIndex]}>{detail}</li>)}</ul>
+            </details>
           </article>
         ))}
       </div>
-      <div class="carousel-controls experience-controls" data-experience-controls hidden>
-        <button class="icon-button" type="button" data-experience-previous aria-label={id('experience.previous')} data-aria-id={id('experience.previous')} data-aria-en={en('experience.previous')}>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
-        </button>
-        <span class="experience-gallery__position" aria-live="polite" data-experience-status>{id('experience.position', { index: 1, count: experience.length })}</span>
-        <button class="icon-button" type="button" data-experience-next aria-label={id('experience.next')} data-aria-id={id('experience.next')} data-aria-en={en('experience.next')}>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
-        </button>
-      </div>
+      <p class="visually-hidden" role="status" aria-live="polite" data-experience-status></p>
     </div>
   </section>
 
   <section class="section-block content-shell credentials-section" id="credentials" aria-labelledby="credentials-heading">
-    <header class="section-heading">
+    <header class="section-heading credentials-heading">
       <div>
         <h2 id="credentials-heading" {...copyAttrs(id('credentials.title'), en('credentials.title'))}>{id('credentials.title')}</h2>
         <p {...copyAttrs(id('credentials.intro'), en('credentials.intro'))}>{id('credentials.intro')}</p>
       </div>
+      <div class="credential-pagination" data-credential-pagination hidden>
+        <span class="credential-pagination__status" data-credential-page-status role="status" aria-live="polite">{id('credentials.page', { index: 1, count: credentialPages.length })}</span>
+        <button class="icon-button" type="button" data-credential-previous aria-label={id('credentials.previous')} data-aria-id={id('credentials.previous')} data-aria-en={en('credentials.previous')}>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+        <button class="icon-button" type="button" data-credential-next aria-label={id('credentials.next')} data-aria-id={id('credentials.next')} data-aria-en={en('credentials.next')}>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+      </div>
     </header>
-    <div class="credential-grid">
-      {credentials.map((entry) => (
-        <article class="credential-card">
-          <figure>
-            <img src={sitePath(entry.data.media.src)} alt={entry.data.media.alt?.id ?? id('credentials.placeholderAlt')} data-alt-id={entry.data.media.alt?.id ?? id('credentials.placeholderAlt')} data-alt-en={entry.data.media.alt?.en ?? en('credentials.placeholderAlt')} width={entry.data.media.width} height={entry.data.media.height} loading="lazy" decoding="async" />
-          </figure>
-          <h3>{entry.data.name}</h3>
-        </article>
-      ))}
+    <div class="credential-viewport" data-credential-viewport>
+      <div class="credential-track" data-credential-track style={`--credential-page-count: ${credentialPages.length}`}>
+        {credentialPages.map((page, pageIndex) => (
+          <div class="credential-page" data-credential-page data-page-index={pageIndex} role="group" aria-label={id('credentials.page', { index: pageIndex + 1, count: credentialPages.length })} data-aria-id={id('credentials.page', { index: pageIndex + 1, count: credentialPages.length })} data-aria-en={en('credentials.page', { index: pageIndex + 1, count: credentialPages.length })}>
+            <div class="credential-grid">
+              {page.map((entry) => {
+                const payload = JSON.stringify({
+                  name: entry.data.name,
+                  media: { ...entry.data.media, src: sitePath(entry.data.media.src) },
+                  alt: entry.data.media.alt ?? { id: id('credentials.placeholderAlt'), en: en('credentials.placeholderAlt') },
+                });
+                const imageAltId = entry.data.media.alt?.id ?? id('credentials.placeholderAlt');
+                const imageAltEn = entry.data.media.alt?.en ?? en('credentials.placeholderAlt');
+                return (
+                  <a class="credential-card" href={sitePath(entry.data.media.src)} target="_blank" rel="noopener noreferrer" data-credential-open data-credential-payload={payload} aria-label={id('credentials.open', { title: entry.data.name })} data-aria-id={id('credentials.open', { title: entry.data.name })} data-aria-en={en('credentials.open', { title: entry.data.name })}>
+                    <figure>
+                      <img src={sitePath(entry.data.media.src)} alt={imageAltId} data-alt-id={imageAltId} data-alt-en={imageAltEn} width={entry.data.media.width} height={entry.data.media.height} loading="lazy" decoding="async" />
+                    </figure>
+                    <h3>{entry.data.name}</h3>
+                  </a>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   </section>
 

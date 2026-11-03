@@ -1,6 +1,11 @@
 {
   "categoryId": "formal",
   "institution": "Universitas Pembangunan Nasional Veteran Jakarta",
+  "logo": {
+    "src": "assets/education/upnvj.png",
+    "width": 520,
+    "height": 520
+  },
   "dates": {
     "start": "2024-07",
     "kind": "ongoing"

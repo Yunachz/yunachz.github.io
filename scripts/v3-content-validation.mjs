@@ -217,6 +217,12 @@ export function validateV3Content(snapshot) {
       if (data.copy?.[locale]?.summary !== undefined) requireText(data.copy[locale].summary, `${source} copy.${locale}.summary`);
     }
     requireDates(data.dates, source);
+    if (data.logo !== undefined) {
+      requireCondition(data.logo && typeof data.logo === 'object', `${source}: logo harus berupa objek`);
+      requireCondition(Number.isInteger(data.logo.width) && data.logo.width > 0 && Number.isInteger(data.logo.height) && data.logo.height > 0, `${source}: logo memerlukan dimensi positif`);
+      const relative = requireLocalAsset(data.logo.src, `${source} logo.src`, publicRoot, 'assets/education/');
+      requireCondition(imageExtensions.has(path.posix.extname(relative).toLowerCase()), `${source}: logo harus berupa gambar`);
+    }
   }
 
   for (const { source, data } of credentials) {

@@ -1,4 +1,5 @@
 import { messages, translate, type Locale, type MessageKey } from '../lib/i18n';
+import { clampPageIndex, paginateRecords } from '../lib/credential-pagination';
 
 const root = document.documentElement;
 const localeStorageKey = 'portfolio-locale';
@@ -6,6 +7,41 @@ const themeStorageKey = 'portfolio-theme';
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 const systemDark = window.matchMedia('(prefers-color-scheme: dark)');
 let locale: Locale = root.dataset.locale === 'en' ? 'en' : 'id';
+const localeToggle = document.querySelector<HTMLButtonElement>('[data-locale-toggle]');
+const emailButton = document.querySelector<HTMLButtonElement>('[data-copy-email]');
+const emailAnnouncement = document.querySelector<HTMLElement>('[data-copy-announcement]');
+const emailAddress = emailButton?.dataset.copyEmail ?? '';
+type EmailCopyPhase = 'idle' | 'pending' | 'success' | 'error';
+let emailCopyPhase: EmailCopyPhase = 'idle';
+let emailCopyDeadline = 0;
+let emailCopyGeneration = 0;
+let emailCopyTimer: number | undefined;
+
+function updateLocaleToggle(): void {
+  if (!localeToggle) return;
+  const key: MessageKey = locale === 'id' ? 'locale.idActiveSwitchToEn' : 'locale.enActiveSwitchToId';
+  localeToggle.dataset.currentLocale = locale;
+  localeToggle.setAttribute('aria-label', messages[locale][key]);
+}
+
+function renderEmailCopyState(): void {
+  if (emailButton) {
+    emailButton.textContent = emailCopyPhase === 'success' ? messages[locale]['contact.copied'] : emailAddress;
+    emailButton.dataset.copyState = emailCopyPhase;
+    emailButton.setAttribute('aria-busy', String(emailCopyPhase === 'pending'));
+  }
+  if (!emailAnnouncement) return;
+  if (emailCopyPhase === 'success' || emailCopyPhase === 'error') {
+    const key: MessageKey = emailCopyPhase === 'success' ? 'contact.copied' : 'contact.copyFailed';
+    emailAnnouncement.dataset.messageKey = key;
+    emailAnnouncement.textContent = messages[locale][key];
+    emailAnnouncement.dataset.state = emailCopyPhase;
+  } else {
+    emailAnnouncement.textContent = '';
+    emailAnnouncement.removeAttribute('data-message-key');
+    emailAnnouncement.dataset.state = emailCopyPhase;
+  }
+}
 
 function applyLocale(nextLocale: Locale): void {
   locale = nextLocale;
@@ -35,8 +71,8 @@ function applyLocale(nextLocale: Locale): void {
   document.querySelectorAll<HTMLElement>('[data-dialog-aria-id][data-dialog-aria-en]').forEach((node) => {
     node.setAttribute('aria-label', nextLocale === 'id' ? node.dataset.dialogAriaId ?? '' : node.dataset.dialogAriaEn ?? '');
   });
-  const language = document.querySelector<HTMLSelectElement>('#site-language');
-  if (language) language.value = nextLocale;
+  updateLocaleToggle();
+  renderEmailCopyState();
   document.title = nextLocale === 'id' ? root.dataset.titleId ?? document.title : root.dataset.titleEn ?? document.title;
   const description = document.querySelector<HTMLMetaElement>('[data-meta-description]');
   if (description) description.content = nextLocale === 'id' ? root.dataset.descriptionId ?? '' : root.dataset.descriptionEn ?? '';
@@ -51,13 +87,10 @@ function applyLocale(nextLocale: Locale): void {
   updateSkillState();
   updateProjectState(false);
   updateExperienceState();
+  updateCredentialState(undefined, false);
 }
 
-const languageSelect = document.querySelector<HTMLSelectElement>('#site-language');
-languageSelect?.addEventListener('change', () => {
-  const chosen = languageSelect.value === 'en' ? 'en' : 'id';
-  applyLocale(chosen);
-});
+localeToggle?.addEventListener('click', () => applyLocale(locale === 'id' ? 'en' : 'id'));
 
 const themeToggle = document.querySelector<HTMLButtonElement>('[data-theme-toggle]');
 type ThemeTransition = { ready?: Promise<unknown>; finished: Promise<unknown>; skipTransition: () => void };
@@ -238,14 +271,37 @@ function openDialog(trigger: HTMLElement, content: Node): boolean {
 }
 
 dialogClose?.addEventListener('click', () => dialog?.close());
-dialog?.addEventListener('click', (event) => {
-  if (event.target === dialog) dialog.close();
+let backdropPointerStartedOutsideContent = false;
+dialog?.addEventListener('pointerdown', (event) => {
+  backdropPointerStartedOutsideContent = event.target === dialog;
 });
+dialog?.addEventListener('pointerup', (event) => {
+  if (backdropPointerStartedOutsideContent && event.target === dialog) dialog?.close();
+  backdropPointerStartedOutsideContent = false;
+});
+dialog?.addEventListener('pointercancel', () => { backdropPointerStartedOutsideContent = false; });
 dialog?.addEventListener('close', () => {
   document.body.classList.remove('dialog-open');
-  addProjectPauseReason('dialog', false);
-  lastDialogTrigger?.focus();
+  const trigger = lastDialogTrigger;
   lastDialogTrigger = null;
+  window.requestAnimationFrame(() => {
+    const projectSlide = trigger?.closest<HTMLElement>('[data-project-slide]');
+    const projectIndex = projectSlide ? filteredProjectSlides.indexOf(projectSlide) : -1;
+    if (projectIndex >= 0) {
+      projectTransition = undefined;
+      projectPhase = projectIndex * projectStep;
+      renderProjectPositions();
+    }
+    const canRestoreTrigger = trigger?.isConnected
+      && !trigger.closest('[hidden], [inert], [aria-hidden="true"]')
+      && trigger.getClientRects().length > 0;
+    if (canRestoreTrigger) {
+      trigger.focus({ preventScroll: true });
+      if (projectIndex >= 0) addProjectPauseReason('keyboard-card', true);
+    }
+    else document.querySelector<HTMLElement>('#main-content')?.focus({ preventScroll: true });
+    addProjectPauseReason('dialog', false);
+  });
 });
 dialog?.addEventListener('keydown', (event) => {
   if (event.key !== 'Tab' || !dialogContent) return;
@@ -381,9 +437,48 @@ function createProjectDialog(payload: ProjectPayload): HTMLElement {
   return article;
 }
 
+type CredentialPayload = {
+  name: string;
+  media: { src: string; width: number; height: number };
+  alt: Record<Locale, string>;
+};
+
+function createCredentialDialog(payload: CredentialPayload): HTMLElement {
+  const article = document.createElement('article');
+  article.className = 'credential-dialog';
+  const title = document.createElement('h2');
+  title.dataset.dialogTitle = '';
+  title.textContent = payload.name;
+
+  const figure = document.createElement('figure');
+  const image = document.createElement('img');
+  image.width = payload.media.width;
+  image.height = payload.media.height;
+  image.alt = payload.alt[locale];
+  image.dataset.altId = payload.alt.id;
+  image.dataset.altEn = payload.alt.en;
+  image.loading = 'eager';
+  image.decoding = 'async';
+  const error = document.createElement('p');
+  error.className = 'credential-dialog__error';
+  error.dataset.copyId = translate('id', 'credentials.imageError');
+  error.dataset.copyEn = translate('en', 'credentials.imageError');
+  error.textContent = messages[locale]['credentials.imageError'];
+  error.hidden = true;
+  image.addEventListener('error', () => { error.hidden = false; }, { once: true });
+  image.src = payload.media.src;
+  figure.append(image);
+  article.append(title, figure, error);
+  article.dataset.dialogAriaId = translate('id', 'dialog.credentialLabel', { title: payload.name });
+  article.dataset.dialogAriaEn = translate('en', 'dialog.credentialLabel', { title: payload.name });
+  article.setAttribute('aria-label', translate(locale, 'dialog.credentialLabel', { title: payload.name }));
+  return article;
+}
+
 const pauseReasons = new Set<string>();
 let updateProjectState: (announce: boolean) => void = () => {};
 let updateProjectTimer: () => void = () => {};
+let updateCredentialState: (pageIndex?: number, announce?: boolean) => void = () => {};
 let lastProjectInteractionWasKeyboard = false;
 document.addEventListener('keydown', () => { lastProjectInteractionWasKeyboard = true; }, true);
 document.addEventListener('pointerdown', () => { lastProjectInteractionWasKeyboard = false; }, true);
@@ -397,15 +492,19 @@ type HorizontalDragState = {
   pointerId: number;
   startX: number;
   startY: number;
-  captureTarget: HTMLElement;
-  wasDragged: boolean;
+  target: HTMLElement;
+  intent: 'pending' | 'horizontal' | 'vertical';
+  lastX: number;
+  distance: number;
+  pauseNotified: boolean;
 };
 
 function bindHorizontalDrag(
   stage: HTMLElement | null,
-  onSwipe: (direction: number) => void,
+  onSwipe: (direction: number, distance: number) => void,
   onDragState?: (active: boolean) => void,
   ignoreSelector = '',
+  onDragMove?: (distance: number) => void,
 ): void {
   if (!stage) return;
   stage.querySelectorAll<HTMLImageElement>('img').forEach((image) => { image.draggable = false; });
@@ -418,9 +517,9 @@ function bindHorizontalDrag(
     drag = undefined;
     stage.classList.remove('is-dragging');
     stage.style.removeProperty('--drag-offset');
-    onDragState?.(false);
-    if (finished?.captureTarget.hasPointerCapture(finished.pointerId)) {
-      try { finished.captureTarget.releasePointerCapture(finished.pointerId); } catch {}
+    if (finished?.pauseNotified) onDragState?.(false);
+    if (finished?.target.hasPointerCapture(finished.pointerId)) {
+      try { finished.target.releasePointerCapture(finished.pointerId); } catch {}
     } else if (event && stage.hasPointerCapture(event.pointerId)) {
       try { stage.releasePointerCapture(event.pointerId); } catch {}
     }
@@ -433,17 +532,16 @@ function bindHorizontalDrag(
     if (ignoreSelector && target.closest(ignoreSelector)) return;
     const control = target.closest<HTMLElement>('button, input, select, textarea');
     if (control && !control.hasAttribute('data-gallery-drag-zone')) return;
-    const captureTarget = target.closest<HTMLElement>('[data-gallery-drag-zone]')
-      ?? target.closest<HTMLElement>('a, summary, figure, img, div, article')
-      ?? stage;
     drag = {
       pointerId: event.pointerId,
       startX: event.clientX,
       startY: event.clientY,
-      captureTarget,
-      wasDragged: false,
+      target: stage,
+      intent: 'pending',
+      lastX: event.clientX,
+      distance: 0,
+      pauseNotified: Boolean(onDragState),
     };
-    try { captureTarget.setPointerCapture(event.pointerId); } catch {}
     onDragState?.(true);
   });
 
@@ -451,10 +549,20 @@ function bindHorizontalDrag(
     if (!drag || event.pointerId !== drag.pointerId) return;
     const dx = event.clientX - drag.startX;
     const dy = event.clientY - drag.startY;
-    if (!drag.wasDragged && Math.abs(dx) > 6 && Math.abs(dx) > Math.abs(dy)) drag.wasDragged = true;
-    if (!drag.wasDragged) return;
+    if (drag.intent === 'pending' && Math.max(Math.abs(dx), Math.abs(dy)) > 6) {
+      drag.intent = Math.abs(dx) > Math.abs(dy) ? 'horizontal' : 'vertical';
+      if (drag.intent === 'horizontal') {
+        try { stage.setPointerCapture(event.pointerId); } catch {}
+        stage.classList.add('is-dragging');
+      }
+    }
+    if (drag.intent !== 'horizontal') return;
+    const delta = event.clientX - drag.lastX;
+    drag.distance += delta;
+    drag.lastX = event.clientX;
     stage.classList.add('is-dragging');
     stage.style.setProperty('--drag-offset', `${dx}px`);
+    onDragMove?.(delta);
     if (event.cancelable) event.preventDefault();
   });
 
@@ -463,14 +571,21 @@ function bindHorizontalDrag(
     const dx = event.clientX - drag.startX;
     const dy = event.clientY - drag.startY;
     const finished = clear(event);
-    if (!finished?.wasDragged || Math.abs(dx) <= 6 || Math.abs(dx) <= Math.abs(dy)) return;
-    suppressClickUntil = Date.now() + 450;
-    if (Math.abs(dx) > 44) onSwipe(dx < 0 ? 1 : -1);
+    if (!finished || finished.intent !== 'horizontal' || Math.abs(dx) <= 6 || Math.abs(dx) <= Math.abs(dy)) return;
+    suppressClickUntil = Date.now() + 240;
+    onSwipe(dx < 0 ? 1 : -1, finished.distance);
   });
 
   stage.addEventListener('pointercancel', (event) => {
     if (!drag || event.pointerId !== drag.pointerId) return;
-    clear(event);
+    const finished = clear(event);
+    if (finished?.intent === 'horizontal') onDragMove?.(0);
+  });
+
+  stage.addEventListener('lostpointercapture', (event) => {
+    if (!drag || event.pointerId !== drag.pointerId) return;
+    const finished = clear(event);
+    if (finished?.intent === 'horizontal') onDragMove?.(0);
   });
 
   stage.addEventListener('click', (event) => {
@@ -496,83 +611,199 @@ let filteredProjectSlides = [...projectSlides];
 let currentProjectIndex = 0;
 let currentFilter = 'all';
 let userPausedProjectMotion = false;
-let projectTimer: number | undefined;
+const projectCopies: Array<{ element: HTMLElement; source: HTMLElement; repeat: number }> = [];
+const projectCountElement = document.querySelector<HTMLElement>('[data-project-count]');
+let projectPhase = 0;
+let projectStep = 404;
+let projectFrame: number | undefined;
+let previousProjectFrame = 0;
+let projectTransition: { from: number; to: number; started: number; duration: number } | undefined;
+
+function positiveModulo(value: number, modulus: number): number {
+  return modulus > 0 ? ((value % modulus) + modulus) % modulus : 0;
+}
+
+function makeProjectCopy(source: HTMLElement, sourceIndex: number, repeat: number): HTMLElement {
+  const copy = source.cloneNode(true) as HTMLElement;
+  copy.removeAttribute('data-project-slide');
+  copy.removeAttribute('data-project-payload');
+  copy.removeAttribute('data-position');
+  copy.removeAttribute('data-active');
+  copy.dataset.projectCloneIndex = String(sourceIndex);
+  copy.dataset.projectCloneRepeat = String(repeat);
+  copy.setAttribute('aria-hidden', 'true');
+  copy.removeAttribute('id');
+  copy.querySelectorAll('[id]').forEach((node) => node.removeAttribute('id'));
+  copy.querySelectorAll('a').forEach((anchor) => {
+    const decorativeCard = document.createElement('div');
+    decorativeCard.className = anchor.className;
+    decorativeCard.setAttribute('aria-hidden', 'true');
+    decorativeCard.append(...Array.from(anchor.childNodes));
+    anchor.replaceWith(decorativeCard);
+  });
+  copy.querySelectorAll('button, input, select, textarea, [tabindex]').forEach((node) => node.removeAttribute('tabindex'));
+  return copy;
+}
+
+projectSlides.forEach((source, sourceIndex) => {
+  for (let repeat = -2; repeat <= 2; repeat += 1) {
+    if (repeat === 0) {
+      projectCopies.push({ element: source, source, repeat });
+      continue;
+    }
+    const copy = makeProjectCopy(source, sourceIndex, repeat);
+    projectStage?.append(copy);
+    projectCopies.push({ element: copy, source, repeat });
+  }
+});
+
+function projectPitch(): number {
+  const sample = filteredProjectSlides[0];
+  const cardWidth = sample ? Number.parseFloat(window.getComputedStyle(sample).width) || sample.offsetWidth : 380;
+  const gap = projectStage ? Number.parseFloat(window.getComputedStyle(projectStage).getPropertyValue('--project-gap')) || 24 : 24;
+  return cardWidth + gap;
+}
+
+function renderProjectPositions(): void {
+  if (!projectStage) return;
+  const count = filteredProjectSlides.length;
+  const stageWidth = projectStage.clientWidth;
+  const cardWidth = projectPitch() - (Number.parseFloat(window.getComputedStyle(projectStage).getPropertyValue('--project-gap')) || 24);
+  const cycle = count * projectStep;
+  const center = stageWidth / 2 - cardWidth / 2;
+  const indexBySlide = new Map(filteredProjectSlides.map((slide, index) => [slide, index]));
+  const staticLayout = count > 0 && count <= 3;
+  projectStage.dataset.static = String(staticLayout);
+  projectStage.dataset.count = String(count);
+  const closestIndex = count ? Math.round(projectPhase / projectStep) % count : 0;
+  currentProjectIndex = positiveModulo(closestIndex, Math.max(1, count));
+
+  projectCopies.forEach(({ element, source, repeat }) => {
+    const index = indexBySlide.get(source);
+    element.dataset.position = index === undefined ? '-1' : String(index - currentProjectIndex);
+    element.dataset.active = String(index !== undefined && index === currentProjectIndex);
+    if (index === undefined || staticLayout) {
+      element.hidden = element !== source || index === undefined;
+      element.setAttribute('aria-hidden', String(element !== source || index === undefined));
+      if (element === source) {
+        source.dataset.position = String(index ?? -1);
+        source.dataset.active = String(index === currentProjectIndex);
+        source.removeAttribute('style');
+        source.setAttribute('aria-hidden', String(index === undefined));
+        (source as HTMLElement & { inert: boolean }).inert = index === undefined;
+      }
+      return;
+    }
+    const base = positiveModulo(index * projectStep - projectPhase, cycle);
+    const x = center + base + repeat * cycle;
+    const visible = x < stageWidth && x + cardWidth > 0;
+    const inOverscan = x > -cardWidth - projectStep && x < stageWidth + projectStep;
+    element.hidden = element === source ? !visible : !inOverscan;
+    element.style.setProperty('--slide-x', `${x}px`);
+    element.setAttribute('aria-hidden', String(element !== source || !visible));
+    if (element === source) {
+      (source as HTMLElement & { inert: boolean }).inert = !visible;
+    }
+  });
+}
+
+function projectMotionAllowed(): boolean {
+  return Boolean(projectStage)
+    && filteredProjectSlides.length > 3
+    && !userPausedProjectMotion
+    && !reduceMotion.matches
+    && pauseReasons.size === 0;
+}
+
+function scheduleProjectFrame(): void {
+  const needsFrame = projectMotionAllowed() || Boolean(projectTransition);
+  if (!needsFrame) {
+    if (projectFrame !== undefined) window.cancelAnimationFrame(projectFrame);
+    projectFrame = undefined;
+    previousProjectFrame = 0;
+    return;
+  }
+  if (projectFrame === undefined) projectFrame = window.requestAnimationFrame(animateProjectFrame);
+}
+
+function animateProjectFrame(timestamp: number): void {
+  projectFrame = undefined;
+  const elapsed = previousProjectFrame ? Math.min(48, timestamp - previousProjectFrame) : 0;
+  previousProjectFrame = timestamp;
+  if (projectTransition) {
+    const transition = projectTransition;
+    const progress = Math.min(1, (timestamp - transition.started) / transition.duration);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    projectPhase = transition.from + (transition.to - transition.from) * eased;
+    if (progress >= 1) projectTransition = undefined;
+  } else if (projectMotionAllowed()) {
+    projectPhase += elapsed * 0.088;
+  }
+  const cycle = filteredProjectSlides.length * projectStep;
+  if (cycle > 0) projectPhase = positiveModulo(projectPhase, cycle);
+  renderProjectPositions();
+  scheduleProjectFrame();
+}
 
 function renderProjectAnnouncement(): void {
-  if (!projectStatus) return;
   const count = filteredProjectSlides.length;
-  projectStatus.textContent = count === 1
+  if (projectCountElement) projectCountElement.textContent = count === 1
     ? messages[locale]['projects.countOne']
     : translate(locale, 'projects.countMany', { count });
 }
 
 updateProjectState = (announce: boolean): void => {
+  const previousId = filteredProjectSlides[currentProjectIndex]?.dataset.projectId;
+  const progress = positiveModulo(projectPhase, projectStep || 404) / (projectStep || 404);
   filteredProjectSlides = projectSlides.filter((slide) => currentFilter === 'all' || (slide.dataset.categories ?? '').split(' ').includes(currentFilter));
-  if (currentProjectIndex >= filteredProjectSlides.length) currentProjectIndex = 0;
   const count = filteredProjectSlides.length;
-  const visiblePositions = new Map<HTMLElement, number>();
-  filteredProjectSlides.forEach((slide, index) => {
-    let position = count ? (index - currentProjectIndex + count) % count : 0;
-    if (position > count / 2) position -= count;
-    visiblePositions.set(slide, position);
-    const visible = Math.abs(position) <= 1 || count <= 3;
-    slide.hidden = !visible;
-    slide.dataset.position = String(position);
-    slide.dataset.active = String(position === 0);
-    slide.setAttribute('aria-hidden', String(!visible));
-    (slide as HTMLElement & { inert: boolean }).inert = !visible;
-  });
-  const sample = filteredProjectSlides.find((slide) => !slide.hidden);
-  const cardWidth = sample ? Number.parseFloat(window.getComputedStyle(sample).width) || sample.offsetWidth : 380;
-  const gap = projectStage ? Number.parseFloat(window.getComputedStyle(projectStage).getPropertyValue('--project-gap')) || 24 : 24;
-  const step = cardWidth + gap;
-  projectSlides.forEach((slide) => {
-    const position = visiblePositions.get(slide);
-    if (position === undefined) {
-      slide.hidden = true;
-      slide.setAttribute('aria-hidden', 'true');
-      (slide as HTMLElement & { inert: boolean }).inert = true;
-      return;
-    }
-    slide.style.setProperty('--slide-offset', `${position * step}px`);
-  });
+  if (projectStage) projectStage.dataset.static = 'false';
+  const measureSlide = filteredProjectSlides[0];
+  if (measureSlide) measureSlide.hidden = false;
+  const nextIndex = filteredProjectSlides.findIndex((slide) => slide.dataset.projectId === previousId);
+  projectStep = projectPitch();
+  if (projectStep <= 0) projectStep = 404;
+  projectPhase = (Math.max(0, nextIndex) + progress) * projectStep;
+  if (count > 0) projectPhase = positiveModulo(projectPhase, count * projectStep);
+  projectTransition = undefined;
+  renderProjectPositions();
   const empty = filteredProjectSlides.length === 0;
   if (projectEmpty) projectEmpty.hidden = !empty;
-  if (projectControls) projectControls.hidden = empty || filteredProjectSlides.length < 2;
+  if (projectControls) projectControls.hidden = empty || filteredProjectSlides.length <= 3;
   if (projectToggle) {
     if (projectCarousel) projectCarousel.dataset.userPaused = String(userPausedProjectMotion);
-    projectToggle.disabled = reduceMotion.matches || filteredProjectSlides.length < 2;
+    projectToggle.disabled = reduceMotion.matches || filteredProjectSlides.length <= 3;
     projectToggle.setAttribute('aria-pressed', String(userPausedProjectMotion));
-    const key: MessageKey = userPausedProjectMotion ? 'projects.play' : 'projects.pause';
+    const key: MessageKey = reduceMotion.matches ? 'projects.motionUnavailable' : userPausedProjectMotion ? 'projects.play' : 'projects.pause';
     projectToggle.setAttribute('aria-label', messages[locale][key]);
+    projectToggle.title = messages[locale][key];
     projectToggle.dataset.ariaId = messages.id[key];
     projectToggle.dataset.ariaEn = messages.en[key];
-    if (projectPauseIcon) projectPauseIcon.style.display = userPausedProjectMotion ? 'none' : 'block';
-    if (projectPlayIcon) projectPlayIcon.style.display = userPausedProjectMotion ? 'block' : 'none';
+    if (projectPauseIcon) projectPauseIcon.style.display = !reduceMotion.matches && !userPausedProjectMotion ? 'block' : 'none';
+    if (projectPlayIcon) projectPlayIcon.style.display = !reduceMotion.matches && userPausedProjectMotion ? 'block' : 'none';
   }
-  if (projectPrevious) projectPrevious.disabled = filteredProjectSlides.length < 2;
-  if (projectNext) projectNext.disabled = filteredProjectSlides.length < 2;
+  if (projectPrevious) projectPrevious.disabled = filteredProjectSlides.length <= 3;
+  if (projectNext) projectNext.disabled = filteredProjectSlides.length <= 3;
   renderProjectAnnouncement();
   if (announce && projectStatus && filteredProjectSlides.length > 1) {
     projectStatus.textContent = translate(locale, 'projects.position', { index: currentProjectIndex + 1, count: filteredProjectSlides.length });
   }
-  updateProjectTimer();
+  scheduleProjectFrame();
 };
 
-updateProjectTimer = (): void => {
-  if (projectTimer !== undefined) window.clearInterval(projectTimer);
-  projectTimer = undefined;
-  if (userPausedProjectMotion || reduceMotion.matches || pauseReasons.size > 0 || filteredProjectSlides.length < 2) return;
-  projectTimer = window.setInterval(() => {
-    currentProjectIndex = (currentProjectIndex + 1) % filteredProjectSlides.length;
-    updateProjectState(false);
-  }, 5200);
-};
+updateProjectTimer = scheduleProjectFrame;
 
 function moveProject(direction: number): void {
-  if (filteredProjectSlides.length < 2) return;
-  currentProjectIndex = (currentProjectIndex + direction + filteredProjectSlides.length) % filteredProjectSlides.length;
-  updateProjectState(true);
+  if (filteredProjectSlides.length < 2 || !projectStage) return;
+  if (reduceMotion.matches) {
+    projectPhase = positiveModulo(projectPhase + direction * projectStep, filteredProjectSlides.length * projectStep);
+    renderProjectPositions();
+    if (projectStatus) projectStatus.textContent = translate(locale, 'projects.position', { index: positiveModulo(currentProjectIndex, filteredProjectSlides.length) + 1, count: filteredProjectSlides.length });
+    return;
+  }
+  projectTransition = { from: projectPhase, to: projectPhase + direction * projectStep, started: performance.now(), duration: 440 };
+  if (projectStatus) projectStatus.textContent = translate(locale, 'projects.position', { index: positiveModulo(currentProjectIndex + direction, filteredProjectSlides.length) + 1, count: filteredProjectSlides.length });
+  scheduleProjectFrame();
 }
 
 projectPrevious?.addEventListener('click', () => moveProject(-1));
@@ -583,7 +814,6 @@ projectToggle?.addEventListener('click', () => {
 });
 filterButtons.forEach((button) => button.addEventListener('click', () => {
   currentFilter = button.dataset.projectFilter ?? 'all';
-  currentProjectIndex = 0;
   filterButtons.forEach((filter) => {
     const active = filter === button;
     filter.classList.toggle('is-active', active);
@@ -595,7 +825,8 @@ projectCarousel?.addEventListener('pointerdown', () => addProjectPauseReason('ke
 projectCarousel?.addEventListener('focusin', (event) => {
   const slide = (event.target as HTMLElement).closest<HTMLElement>('[data-project-slide]');
   if (!slide || slide.hidden) return;
-  if (lastProjectInteractionWasKeyboard) addProjectPauseReason('keyboard-card', true);
+  if (!lastProjectInteractionWasKeyboard) return;
+  addProjectPauseReason('keyboard-card', true);
   if (slide.dataset.active === 'true') return;
   const index = filteredProjectSlides.indexOf(slide);
   if (index >= 0) {
@@ -608,7 +839,16 @@ projectCarousel?.addEventListener('focusout', (event) => {
   const nextSlide = target instanceof HTMLElement ? target.closest<HTMLElement>('[data-project-slide]') : null;
   if (!nextSlide || nextSlide.hidden) addProjectPauseReason('keyboard-card', false);
 });
-bindHorizontalDrag(projectStage, moveProject, (active) => addProjectPauseReason('drag', active));
+bindHorizontalDrag(projectStage, () => {}, (active) => {
+  if (active) projectTransition = undefined;
+  addProjectPauseReason('drag', active);
+}, '', (delta) => {
+  projectTransition = undefined;
+  projectPhase -= delta;
+  const cycle = filteredProjectSlides.length * projectStep;
+  if (cycle > 0) projectPhase = positiveModulo(projectPhase, cycle);
+  renderProjectPositions();
+});
 document.addEventListener('visibilitychange', () => addProjectPauseReason('hidden', document.hidden));
 if (projectCarousel && 'IntersectionObserver' in window) {
   const projectObserver = new IntersectionObserver(([entry]) => addProjectPauseReason('offscreen', !(entry?.isIntersecting ?? false)), { threshold: 0.08 });
@@ -616,62 +856,54 @@ if (projectCarousel && 'IntersectionObserver' in window) {
 }
 
 document.addEventListener('click', (event) => {
-  const trigger = (event.target as HTMLElement).closest<HTMLAnchorElement>('[data-project-open]');
-  if (!trigger) return;
-  if (trigger.closest<HTMLElement>('[data-project-slide]')?.hidden) return;
+  const target = event.target instanceof HTMLElement ? event.target : null;
+  const clone = target?.closest<HTMLElement>('[data-project-clone-index]');
+  const trigger = target?.closest<HTMLAnchorElement>('[data-project-open]');
+  if (!trigger && !clone) return;
   if (event instanceof MouseEvent && (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0)) return;
-  const slide = trigger.closest<HTMLElement>('[data-project-slide]');
+  const slide = trigger?.closest<HTMLElement>('[data-project-slide]')
+    ?? projectSlides[Number(clone?.dataset.projectCloneIndex)];
   if (!slide) return;
+  if (!clone && (slide.hidden || slide.getAttribute('aria-hidden') === 'true')) return;
   let payload: ProjectPayload;
   try { payload = JSON.parse(slide.dataset.projectPayload ?? 'null') as ProjectPayload; } catch { return; }
   const content = createProjectDialog(payload);
-  if (!openDialog(trigger, content)) return;
+  if (!openDialog(trigger ?? projectToggle ?? slide, content)) return;
   event.preventDefault();
   addProjectPauseReason('dialog', true);
   applyLocale(locale);
 });
 
 const experienceSlides = [...document.querySelectorAll<HTMLElement>('[data-experience-slide]')];
-const experienceControls = document.querySelector<HTMLElement>('[data-experience-controls]');
-const experiencePrevious = document.querySelector<HTMLButtonElement>('[data-experience-previous]');
-const experienceNext = document.querySelector<HTMLButtonElement>('[data-experience-next]');
+const experienceCopies = [...document.querySelectorAll<HTMLElement>('[data-experience-copy]')];
 const experienceStatus = document.querySelector<HTMLElement>('[data-experience-status]');
 const experienceStage = document.querySelector<HTMLElement>('[data-experience-stage]');
 let currentExperienceIndex = 0;
 
 function updateExperienceState(): void {
   const count = experienceSlides.length;
-  const stageWidth = experienceStage?.clientWidth ?? 1000;
-  const centerWidth = Math.min(640, stageWidth * 0.9);
-  const step = centerWidth * 0.78;
   experienceSlides.forEach((slide, index) => {
     let position = count ? (index - currentExperienceIndex + count) % count : 0;
     if (position > count / 2) position -= count;
-    const visible = Math.abs(position) <= 1 || count <= 3;
+    const visible = Math.abs(position) <= 2 || count <= 3;
+    const interactive = Math.abs(position) <= 1 || count <= 1;
     slide.hidden = !visible;
     slide.dataset.position = String(position);
     slide.dataset.active = String(position === 0);
-    slide.style.setProperty('--slide-offset', `${position * step}px`);
     slide.setAttribute('aria-hidden', String(!visible));
-    (slide as HTMLElement & { inert: boolean }).inert = !visible;
-    const jump = slide.querySelector<HTMLButtonElement>('[data-experience-jump]');
-    if (jump) {
-      const canNavigate = count > 1 && Math.abs(position) === 1;
-      jump.hidden = !canNavigate;
-      const key: MessageKey = position < 0 ? 'experience.previous' : 'experience.next';
-      jump.dataset.ariaId = messages.id[key];
-      jump.dataset.ariaEn = messages.en[key];
-      jump.setAttribute('aria-label', messages[locale][key]);
-      jump.dataset.direction = String(position);
-    }
+    (slide as HTMLElement & { inert: boolean }).inert = !interactive;
   });
-  if (experienceControls) experienceControls.hidden = count < 2;
-  if (experiencePrevious) experiencePrevious.disabled = count < 2;
-  if (experienceNext) experienceNext.disabled = count < 2;
+  experienceCopies.forEach((copy, index) => {
+    const active = index === currentExperienceIndex;
+    copy.hidden = false;
+    copy.setAttribute('aria-hidden', String(!active));
+    (copy as HTMLElement & { inert: boolean }).inert = !active;
+    copy.dataset.active = String(active);
+  });
   if (experienceStatus) {
     experienceStatus.textContent = count === 0
       ? messages[locale]['experience.empty']
-      : translate(locale, 'experience.position', { index: currentExperienceIndex + 1, count });
+      : `${translate(locale, 'experience.position', { index: currentExperienceIndex + 1, count })}: ${experienceCopies[currentExperienceIndex]?.querySelector('h3')?.textContent ?? ''}`;
   }
 }
 
@@ -684,15 +916,83 @@ function moveExperience(direction: number): void {
   });
   updateExperienceState();
 }
-experiencePrevious?.addEventListener('click', () => moveExperience(-1));
-experienceNext?.addEventListener('click', () => moveExperience(1));
-experienceSlides.forEach((slide) => {
-  slide.querySelector<HTMLButtonElement>('[data-experience-jump]')?.addEventListener('click', () => {
-    const position = Number(slide.dataset.position ?? 0);
-    if (Math.abs(position) === 1) moveExperience(position);
-  });
+experienceSlides.forEach((slide) => slide.addEventListener('click', () => {
+  const position = Number(slide.dataset.position ?? 0);
+  if (Math.abs(position) === 1) moveExperience(position);
+}));
+experienceStage?.addEventListener('keydown', (event) => {
+  if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+  if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+    event.preventDefault();
+    moveExperience(event.key === 'ArrowLeft' ? -1 : 1);
+  } else if (event.key === 'Home') {
+    event.preventDefault();
+    currentExperienceIndex = 0;
+    updateExperienceState();
+  } else if (event.key === 'End') {
+    event.preventDefault();
+    currentExperienceIndex = Math.max(0, experienceSlides.length - 1);
+    updateExperienceState();
+  }
 });
-bindHorizontalDrag(experienceStage, moveExperience, undefined, 'summary, input, select, textarea, a');
+bindHorizontalDrag(experienceStage, (direction) => moveExperience(direction), undefined, 'summary, input, select, textarea, a, [data-experience-caption]');
+
+const credentialTrack = document.querySelector<HTMLElement>('[data-credential-track]');
+const credentialPageElements = [...document.querySelectorAll<HTMLElement>('[data-credential-page]')];
+const credentialCards = [...document.querySelectorAll<HTMLAnchorElement>('[data-credential-open]')];
+const credentialPagination = document.querySelector<HTMLElement>('[data-credential-pagination]');
+const credentialPageStatus = document.querySelector<HTMLElement>('[data-credential-page-status]');
+const credentialPrevious = document.querySelector<HTMLButtonElement>('[data-credential-previous]');
+const credentialNext = document.querySelector<HTMLButtonElement>('[data-credential-next]');
+let currentCredentialPage = 0;
+
+updateCredentialState = (pageIndex = currentCredentialPage, announce = true): void => {
+  const result = paginateRecords(credentialCards, pageIndex);
+  currentCredentialPage = clampPageIndex(result.pageIndex, credentialPageElements.length);
+  const pageCount = credentialPageElements.length;
+  credentialPageElements.forEach((page, index) => {
+    const active = index === currentCredentialPage;
+    page.setAttribute('aria-hidden', String(!active));
+    page.setAttribute('aria-current', active ? 'page' : 'false');
+    (page as HTMLElement & { inert: boolean }).inert = !active;
+  });
+  if (credentialTrack) credentialTrack.style.transform = `translate3d(-${pageCount ? currentCredentialPage * 100 / pageCount : 0}%, 0, 0)`;
+  if (credentialPageStatus) {
+    const status = pageCount ? translate(locale, 'credentials.page', { index: currentCredentialPage + 1, count: pageCount }) : messages[locale]['credentials.empty'];
+    credentialPageStatus.textContent = status;
+    if (announce) credentialPageStatus.dataset.state = 'changed';
+    else credentialPageStatus.removeAttribute('data-state');
+  }
+  if (credentialPagination) credentialPagination.hidden = pageCount <= 1;
+  if (credentialPrevious) credentialPrevious.disabled = currentCredentialPage <= 0;
+  if (credentialNext) credentialNext.disabled = currentCredentialPage >= pageCount - 1;
+};
+
+credentialPrevious?.addEventListener('click', () => updateCredentialState(currentCredentialPage - 1));
+credentialNext?.addEventListener('click', () => updateCredentialState(currentCredentialPage + 1));
+document.querySelector<HTMLElement>('[data-credential-viewport]')?.addEventListener('keydown', (event) => {
+  if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+  if (event.key === 'ArrowLeft' && currentCredentialPage > 0) {
+    event.preventDefault();
+    updateCredentialState(currentCredentialPage - 1);
+  } else if (event.key === 'ArrowRight' && currentCredentialPage < credentialPageElements.length - 1) {
+    event.preventDefault();
+    updateCredentialState(currentCredentialPage + 1);
+  }
+});
+
+document.addEventListener('click', (event) => {
+  const trigger = event.target instanceof HTMLElement ? event.target.closest<HTMLAnchorElement>('[data-credential-open]') : null;
+  if (!trigger || trigger.closest('[aria-hidden="true"]')) return;
+  if (event instanceof MouseEvent && (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0)) return;
+  let payload: CredentialPayload;
+  try { payload = JSON.parse(trigger.dataset.credentialPayload ?? 'null') as CredentialPayload; } catch { return; }
+  const content = createCredentialDialog(payload);
+  if (!openDialog(trigger, content)) return;
+  event.preventDefault();
+  addProjectPauseReason('dialog', true);
+  applyLocale(locale);
+});
 
 const skillCards = [...document.querySelectorAll<HTMLElement>('[data-skill-card]')];
 let activeSkillId = skillCards[0]?.dataset.skillId ?? '';
@@ -702,9 +1002,14 @@ function updateSkillState(): void {
     const active = card.dataset.skillId === activeSkillId;
     card.dataset.active = String(active);
     const button = card.querySelector<HTMLButtonElement>('[data-skill-activate]');
+    const detail = card.querySelector<HTMLElement>('.skill-card__detail');
     const title = card.querySelector<HTMLElement>('.skill-card__detail strong');
     if (!button || !title) return;
     button.setAttribute('aria-expanded', String(active));
+    if (detail) {
+      detail.setAttribute('aria-hidden', String(!active));
+      (detail as HTMLElement & { inert: boolean }).inert = !active;
+    }
     const idTitle = title.dataset.copyId ?? title.textContent ?? '';
     const enTitle = title.dataset.copyEn ?? title.textContent ?? '';
     const idLabel = translate('id', 'skills.expand', { title: idTitle });
@@ -769,8 +1074,6 @@ document.querySelectorAll<HTMLImageElement>('[data-software-icon]').forEach((ima
   }, { once: true });
 });
 
-const emailButton = document.querySelector<HTMLButtonElement>('[data-copy-email]');
-const emailAnnouncement = document.querySelector<HTMLElement>('[data-copy-announcement]');
 async function copyWithFallback(text: string): Promise<boolean> {
   if (navigator.clipboard?.writeText) {
     try {
@@ -780,26 +1083,54 @@ async function copyWithFallback(text: string): Promise<boolean> {
   }
   const temporary = document.createElement('textarea');
   const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  const selection = document.getSelection();
+  const savedRanges = selection ? Array.from({ length: selection.rangeCount }, (_, index) => selection.getRangeAt(index).cloneRange()) : [];
   temporary.value = text;
   temporary.setAttribute('readonly', '');
   temporary.style.position = 'fixed';
+  temporary.style.insetInlineStart = '-10000px';
   temporary.style.opacity = '0';
   document.body.append(temporary);
   temporary.select();
   let copied = false;
-  try { copied = document.execCommand('copy'); } catch {}
-  temporary.remove();
-  previousFocus?.focus({ preventScroll: true });
+  try {
+    copied = document.execCommand('copy');
+  } catch {
+    copied = false;
+  } finally {
+    temporary.remove();
+    if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true });
+    if (selection) {
+      selection.removeAllRanges();
+      savedRanges.forEach((range) => {
+        try { selection.addRange(range); } catch {}
+      });
+    }
+  }
   return copied;
 }
+
 emailButton?.addEventListener('click', async () => {
-  const success = await copyWithFallback(emailButton.dataset.copyEmail ?? '');
-  if (emailAnnouncement) {
-    const key: MessageKey = success ? 'contact.copied' : 'contact.copyFailed';
-    emailAnnouncement.dataset.messageKey = key;
-    emailAnnouncement.textContent = messages[locale][key];
-    emailAnnouncement.dataset.state = success ? 'success' : 'error';
-  }
+  const generation = ++emailCopyGeneration;
+  if (emailCopyTimer !== undefined) window.clearTimeout(emailCopyTimer);
+  emailCopyTimer = undefined;
+  emailCopyPhase = 'pending';
+  emailCopyDeadline = 0;
+  renderEmailCopyState();
+  let success = false;
+  try { success = await copyWithFallback(emailAddress); } catch { success = false; }
+  if (generation !== emailCopyGeneration) return;
+  emailCopyPhase = success ? 'success' : 'error';
+  emailCopyDeadline = Date.now() + 2200;
+  renderEmailCopyState();
+  const expireFeedback = () => {
+    if (generation !== emailCopyGeneration || Date.now() < emailCopyDeadline) return;
+    emailCopyPhase = 'idle';
+    emailCopyDeadline = 0;
+    emailCopyTimer = undefined;
+    renderEmailCopyState();
+  };
+  emailCopyTimer = window.setTimeout(expireFeedback, Math.max(0, emailCopyDeadline - Date.now()));
 });
 emailButton?.removeAttribute('hidden');
 
