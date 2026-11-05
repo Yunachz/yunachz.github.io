@@ -47,6 +47,12 @@ Scope: additive once-only entrances on the home page and the About portrait repl
 - A same-window tab switch sets `document.hidden=true`; resizing while hidden adds zero RAFs and zero WebGL draws, and returning resumes rendering. A real touch beginning on the Lanyard canvas scrolls mobile from 0 to 209. The baseline viewport matrix through 320px–1920px had no horizontal overflow. Entrance traces show `unseen → entering → done` once; completed headings stay done after scrolling and locale changes.
 - The final detector reported one Geist overused-font warning. Geist remains because the V5 brief and root design system explicitly require preserving it. Full test, fallback, V5 regression, HTTP asset, CLS, and byte-hash results are recorded in `docs/V6-QA.md`.
 
+## Published release
+
+- Source commit `db42225baa31285a1d0c52f9a56ef333cf05d091` was pushed to `main`. GitHub Pages workflow run [41967354855](https://github.com/Yunachz/yunachz.github.io/actions/runs/41967354855) completed successfully for that exact commit.
+- Public root returned HTTP 200. Its 120,071-byte response differs from the 120,069-byte preview build only in Astro's generated `astro-island` UID; after normalizing that UID, the complete HTML matches. The other six route responses match their build files byte for byte.
+- All 11 checked public assets returned HTTP 200 and matched the build bytes: hashed About/Lanyard/React bundles and CSS, favicon, profile portrait, card back, woven strap, and both CV PDFs.
+
 ## Changed files
 
 `astro.config.mjs`, `tsconfig.json`, `package.json`, `package-lock.json`, `src/components/HomePageV3.astro`, `src/layouts/PortfolioLayoutV3.astro`, `src/scripts/v3-ui.ts`, `src/scripts/v6-entrance.ts`, `src/lib/v6-entrance-state.mjs`, `src/styles/v3.css`, `src/data/lanyard.ts`, `src/components/AboutLanyard.jsx`, `src/components/lanyard/Lanyard.jsx`, `src/components/lanyard/Lanyard.css`, `src/components/lanyard/LICENSE.md`, `public/assets/lanyard/card-back.svg`, `public/assets/lanyard/strap-weave.svg`, `tests/v6-entrance.test.mjs`, `docs/CONTENT-GUIDE.md`, `docs/V6-QA.md`, and this document.

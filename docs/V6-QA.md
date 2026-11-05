@@ -22,7 +22,13 @@ Production build HTML SHA-256: `ed86f67ce520ea8bb43b209ee72c3fb57814c39511e9aa8a
 
 All current production-browser artifacts are in `.checkpoints/v6-2026-11-04-qa/`: `browser-baseline.json`, `browser-interactions-final.json`, `browser-lanyard-tap.json`, `browser-hidden-tab.json`, `browser-v5-regression.json`, `preview-final-home.json`, `preview-final-home-1440.png`, `lanyard-idle.png`, `lanyard-held-drag.png`, `lanyard-release.png`, `lanyard-flipped.png`, `mobile-resting-position.png`, `mobile-touch-scroll.png`, `reduced-motion.png`, `no-js.png`, and `webgl-fallback.png`. Preview screenshots were captured from the built production output at `http://127.0.0.1:4321/`.
 
-Coordinator gate: PASS on the exact frozen preview SHA above. Keep the preview available; the scoped commit, push, and public deployment remain the release steps.
+Coordinator gate: PASS on the exact frozen preview SHA above. The source commit was pushed and its GitHub Pages workflow completed successfully; public verification follows.
+
+## Public release verification
+
+- Source commit: `db42225baa31285a1d0c52f9a56ef333cf05d091` on `main`. [GitHub Pages workflow run 41967354855](https://github.com/Yunachz/yunachz.github.io/actions/runs/41967354855) completed successfully for this exact SHA.
+- All seven public routes returned HTTP 200. The six project routes (including `/projects/`) match their built HTML byte for byte. The root returned 120,071 bytes versus 120,069 locally; the only difference is Astro's generated `astro-island` UID (`GeADW` locally, `Z2wRIxg` publicly). Full HTML matches after normalizing that UID. Local root SHA-256 is `ed86f67ce520ea8bb43b209ee72c3fb57814c39511e9aa8a23a320e89cb831d2`; public response SHA-256 is `538074fba03e7b7c48bf10185b44393e9b594e604e1d489e245805dd876fa7c8`.
+- All 11 checked assets returned HTTP 200 and matched the build bytes: hashed About/Lanyard/React bundles and stylesheet, favicon, profile portrait, local card-back and strap SVGs, and both CV PDFs. Portrait and CV SHA-256 values remain unchanged.
 
 ## Previous checkpoint results (superseded)
 
