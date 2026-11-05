@@ -1,0 +1,31 @@
+/* React Bits Lanyard-JS-CSS: scoped adaptation of the fetched upstream stylesheet. */
+.about-lanyard .lanyard {
+  isolation: isolate;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.about-lanyard .lanyard-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.about-lanyard .lanyard-hit-area {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  cursor: grab;
+  pointer-events: none;
+  touch-action: pan-y;
+}

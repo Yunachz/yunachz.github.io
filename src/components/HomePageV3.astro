@@ -5,6 +5,9 @@ import { categoriesForProjects, categoryLabelForProject } from '../lib/project-c
 import { buildCredentialDisplayPages } from '../lib/credential-pagination';
 import { translate } from '../lib/i18n';
 import { sitePath } from '../lib/urls';
+import { segmentGraphemes } from '../lib/v6-entrance-state.mjs';
+import AboutLanyard from './AboutLanyard.jsx';
+import { lanyardConfig } from '../data/lanyard';
 
 const siteEntries = await getCollection('site');
 const profile = siteEntries.find((entry) => entry.data.kind === 'profile')?.data;
@@ -49,6 +52,7 @@ const id = (key: Parameters<typeof translate>[1], params?: Record<string, string
 const en = (key: Parameters<typeof translate>[1], params?: Record<string, string | number>) => translate('en', key, params);
 const copyAttrs = (indonesian: string, english: string) => ({ 'data-copy-id': indonesian, 'data-copy-en': english });
 const ariaAttrs = (indonesian: string, english: string) => ({ 'data-aria-id': indonesian, 'data-aria-en': english });
+const headingSegments = (text: string) => segmentGraphemes(text, 'id');
 const cvPathId = sitePath(profile.cvByLocale.id);
 const cvPathEn = sitePath(profile.cvByLocale.en);
 const profileLanguages = profile.languages.map((language) => ({
@@ -84,32 +88,37 @@ const navItems = [
 >
   <section class="hero content-shell" id="about" aria-labelledby="page-title">
     <div class="hero__copy">
-      <h1 id="page-title" data-copy-id={profile.name} data-copy-en={profile.name}>{profile.name}</h1>
-      <p class="hero__field" {...copyAttrs(profile.copy.id.field, profile.copy.en.field)}>{profile.copy.id.field}</p>
-      <p class="hero__intro" {...copyAttrs(profile.copy.id.summary, profile.copy.en.summary)}>{profile.copy.id.summary}</p>
+      <h1 id="page-title" data-v6-heading data-v6-type data-v6-enter="hero:title">
+        <span class="v6-heading__source" data-copy-id={profile.name} data-copy-en={profile.name}>{profile.name}</span>
+        <span class="v6-heading__visual" aria-hidden="true">
+          {headingSegments(profile.name).map((grapheme) => <span class="v6-heading__grapheme">{grapheme}</span>)}
+        </span>
+      </h1>
+      <p class="hero__field" data-v6-enter="hero:field" {...copyAttrs(profile.copy.id.field, profile.copy.en.field)}>{profile.copy.id.field}</p>
+      <p class="hero__intro" data-v6-enter="hero:intro" {...copyAttrs(profile.copy.id.summary, profile.copy.en.summary)}>{profile.copy.id.summary}</p>
       <div class="hero__facts" aria-label="Fakta singkat tentang Fajar" data-aria-id="Fakta singkat tentang Fajar" data-aria-en="A few facts about Fajar">
-        <div class="hero-fact">
+        <div class="hero-fact" data-v6-enter="hero:fact:gpa">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 2 3 3 6 3s6-1 6-3v-5"/></svg>
           <span class="hero-fact__label" {...copyAttrs(id('facts.gpaLabel'), en('facts.gpaLabel'))}>{id('facts.gpaLabel')}</span>
           <strong class="hero-fact__value" {...copyAttrs(profileGpaId, profileGpaEn)}>{profileGpaId}</strong>
         </div>
-        <div class="hero-fact">
+        <div class="hero-fact" data-v6-enter="hero:fact:location">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="9" r="2.2"/></svg>
           <span class="hero-fact__label" {...copyAttrs(id('facts.locationLabel'), en('facts.locationLabel'))}>{id('facts.locationLabel')}</span>
           <strong class="hero-fact__value" {...copyAttrs(profile.location ?? id('facts.location'), profile.location ?? en('facts.location'))}>{profile.location}</strong>
         </div>
-        <div class="hero-fact hero-fact--languages">
+        <div class="hero-fact hero-fact--languages" data-v6-enter="hero:fact:languages">
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3.8 9h16.4M3.8 15h16.4M12 3c2.2 2.4 3.2 5.4 3.2 9s-1 6.6-3.2 9c-2.2-2.4-3.2-5.4-3.2-9S9.8 5.4 12 3Z"/></svg>
           <span class="hero-fact__label" {...copyAttrs('Bahasa', 'Languages')}>{'Bahasa'}</span>
           <strong class="hero-fact__value" {...copyAttrs(profileLanguagesId, profileLanguagesEn)}>{profileLanguagesId}</strong>
         </div>
       </div>
       <div class="hero__actions">
-        <button class="button button--primary" type="button" data-cv-open data-cv-id-url={cvPathId} data-cv-en-url={cvPathEn} hidden>
+        <button class="button button--primary" type="button" data-cv-open data-v6-enter="hero:action:cv" data-v6-delay="0" data-cv-id-url={cvPathId} data-cv-en-url={cvPathEn} hidden>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3.5h7l4 4v13H7z"/><path d="M14 3.5v4h4M10 12h5M10 15h5"/></svg>
           <span data-copy-id={id('hero.cv')} data-copy-en={en('hero.cv')}>{id('hero.cv')}</span>
         </button>
-        <a class="button button--quiet" href="#projects">
+        <a class="button button--quiet" href="#projects" data-v6-enter="hero:action:projects" data-v6-delay="0">
           <span data-copy-id={id('hero.projects')} data-copy-en={en('hero.projects')}>{id('hero.projects')}</span>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v15M6 13l6 6 6-6"/></svg>
         </a>
@@ -121,34 +130,51 @@ const navItems = [
         </div>
       </noscript>
     </div>
-    <figure class="hero-portrait">
-      <img
-        src={sitePath(profile.photo ?? '')}
-        alt={profile.copy.id.photoAlt}
-        data-alt-id={profile.copy.id.photoAlt}
-        data-alt-en={profile.copy.en.photoAlt}
-        width={profile.photoWidth}
-        height={profile.photoHeight}
-        loading="eager"
-        decoding="async"
-        fetchpriority="high"
-      />
-      <span class="hero-portrait__frame" aria-hidden="true"></span>
+    <figure class="hero-portrait" data-v6-enter="hero:lanyard" data-v6-delay="0" data-v6-requires-ready="true" data-v6-enter-target=".hero-portrait__stage" data-lanyard-state="fallback">
+      <div class="hero-portrait__fallback">
+        <span class="hero-portrait__fallback-strap" aria-hidden="true"></span>
+        <span class="hero-portrait__fallback-ring" aria-hidden="true"></span>
+        <span class="hero-portrait__fallback-clamp" aria-hidden="true"></span>
+        <img
+          class="hero-portrait__fallback-photo"
+          src={sitePath(profile.photo ?? '')}
+          alt={profile.copy.id.photoAlt}
+          data-alt-id={profile.copy.id.photoAlt}
+          data-alt-en={profile.copy.en.photoAlt}
+          width={profile.photoWidth}
+          height={profile.photoHeight}
+          loading="eager"
+          decoding="async"
+          fetchpriority="high"
+        />
+      </div>
+      <div class="hero-portrait__stage" aria-hidden="true">
+        <AboutLanyard
+          client:visible
+          frontImage={sitePath(lanyardConfig.frontImage)}
+          backImage={sitePath(lanyardConfig.backImage)}
+          strapImage={sitePath(lanyardConfig.strapImage)}
+          settings={lanyardConfig}
+        />
+      </div>
     </figure>
   </section>
 
   <section class="section-block content-shell project-section" id="projects" aria-labelledby="projects-heading">
     <header class="section-heading">
       <div>
-        <h2 id="projects-heading" {...copyAttrs(id('projects.title'), en('projects.title'))}>{id('projects.title')}</h2>
-        <p {...copyAttrs(id('projects.intro'), en('projects.intro'))}>{id('projects.intro')}</p>
+        <h2 id="projects-heading" data-v6-heading data-v6-type data-v6-enter="heading:projects">
+          <span class="v6-heading__source" {...copyAttrs(id('projects.title'), en('projects.title'))}>{id('projects.title')}</span>
+          <span class="v6-heading__visual" aria-hidden="true">{headingSegments(id('projects.title')).map((grapheme) => <span class="v6-heading__grapheme">{grapheme}</span>)}</span>
+        </h2>
+        <p data-v6-enter="projects:intro" {...copyAttrs(id('projects.intro'), en('projects.intro'))}>{id('projects.intro')}</p>
       </div>
-      <a class="text-link section-heading__link" href={sitePath('/projects/')}>
+      <a class="text-link section-heading__link" href={sitePath('/projects/')} data-v6-enter="projects:archive" data-v6-delay="0">
         <span data-copy-id={`${id('projects.more')} (${projectCollection.length})`} data-copy-en={`${en('projects.more')} (${projectCollection.length})`}>{id('projects.more')} ({projectCollection.length})</span>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg>
       </a>
     </header>
-    <div class="project-toolbar">
+    <div class="project-toolbar" data-v6-enter="projects:toolbar" data-v6-delay="0">
       <div class="project-filters" role="group" aria-label={id('projects.filterLabel')} data-aria-id={id('projects.filterLabel')} data-aria-en={en('projects.filterLabel')}>
         <button type="button" class="filter-chip is-active" data-project-filter="all" aria-pressed="true" disabled {...copyAttrs(id('projects.all'), en('projects.all'))}>{id('projects.all')}</button>
         {categories.map((category) => (
@@ -190,7 +216,7 @@ const navItems = [
             url: sitePath(`/projects/${data.slug}/`),
           });
           return (
-            <article class="project-slide" data-project-slide data-project-id={data.slug} data-project-payload={payload} data-categories={data.categoryIds.join(' ')} data-position={index}>
+            <article class="project-slide" data-project-slide data-v6-enter={`project:${data.slug}`} data-v6-enter-target=".project-card" data-v6-delay="0" data-project-id={data.slug} data-project-payload={payload} data-categories={data.categoryIds.join(' ')} data-position={index}>
               <a class="project-card" href={sitePath(`/projects/${data.slug}/`)} data-project-open {...ariaAttrs(id('projects.openDetail', { title: data.title }), en('projects.openDetail', { title: data.title }))} aria-label={id('projects.openDetail', { title: data.title })}>
                 <figure class="project-card__media">
                   <img
@@ -226,11 +252,14 @@ const navItems = [
   <section class="section-block content-shell skills-section" id="skills" aria-labelledby="skills-heading">
     <header class="section-heading">
       <div>
-        <h2 id="skills-heading" {...copyAttrs(id('skills.title'), en('skills.title'))}>{id('skills.title')}</h2>
-        <p {...copyAttrs(id('skills.intro'), en('skills.intro'))}>{id('skills.intro')}</p>
+        <h2 id="skills-heading" data-v6-heading data-v6-type data-v6-enter="heading:skills">
+          <span class="v6-heading__source" {...copyAttrs(id('skills.title'), en('skills.title'))}>{id('skills.title')}</span>
+          <span class="v6-heading__visual" aria-hidden="true">{headingSegments(id('skills.title')).map((grapheme) => <span class="v6-heading__grapheme">{grapheme}</span>)}</span>
+        </h2>
+        <p data-v6-enter="skills:intro" {...copyAttrs(id('skills.intro'), en('skills.intro'))}>{id('skills.intro')}</p>
       </div>
     </header>
-    <div class="skill-tabs" data-skill-tabs role="tablist" aria-label={id('skills.tabsLabel')} data-aria-id={id('skills.tabsLabel')} data-aria-en={en('skills.tabsLabel')}>
+    <div class="skill-tabs" data-skill-tabs data-v6-enter="skills:tabs" data-v6-delay="0" role="tablist" aria-label={id('skills.tabsLabel')} data-aria-id={id('skills.tabsLabel')} data-aria-en={en('skills.tabsLabel')}>
       <button type="button" role="tab" id="skills-tab" aria-controls="skills-panel" aria-selected="true" tabindex="0" data-skill-tab="skills" hidden {...copyAttrs(id('skills.tab'), en('skills.tab'))}>{id('skills.tab')}</button>
       <button type="button" role="tab" id="software-tab" aria-controls="software-panel" aria-selected="false" tabindex="-1" data-skill-tab="software" hidden {...copyAttrs(id('software.tab'), en('software.tab'))}>{id('software.tab')}</button>
     </div>
@@ -241,7 +270,7 @@ const navItems = [
           const ariaId = id('skills.expand', { title: group.data.copy.id.title });
           const ariaEn = en('skills.expand', { title: group.data.copy.en.title });
           return (
-            <article class="skill-card" data-skill-card data-skill-id={group.id} data-skill-ids={group.data.skillIds.join(' ')} data-chip-count={group.data.chips.length} data-active="false" style={representativeSkill ? `--skill-art: url('${sitePath(representativeSkill.data.media.src)}')` : undefined}>
+            <article class="skill-card" data-skill-card data-v6-enter={`skill:${group.id}`} data-v6-delay="0" data-skill-id={group.id} data-skill-ids={group.data.skillIds.join(' ')} data-chip-count={group.data.chips.length} data-active="false" style={representativeSkill ? `--skill-art: url('${sitePath(representativeSkill.data.media.src)}')` : undefined}>
               <button class="skill-card__button" type="button" data-skill-activate disabled aria-expanded="false" aria-controls={`skill-copy-${group.id}`} aria-label={ariaId} data-aria-id={ariaId} data-aria-en={ariaEn}>
                 <span class="skill-card__label" data-copy-id={group.data.copy.id.shortLabel} data-copy-en={group.data.copy.en.shortLabel}>{group.data.copy.id.shortLabel}</span>
                 <span class="skill-card__detail" id={`skill-copy-${group.id}`}>
@@ -262,7 +291,7 @@ const navItems = [
     <div class="software-panel" id="software-panel" role="tabpanel" aria-labelledby="software-tab" data-skill-panel="software">
       <ul class="software-grid">
         {software.map((app) => (
-          <li class="software-tile">
+          <li class="software-tile" data-v6-enter={`software:${app.id}`} data-v6-delay="0">
             <span class="software-tile__icon">
               <span class="software-tile__fallback" aria-hidden="true">{app.data.monogram}</span>
               <img src={sitePath(app.data.icon)} alt="" width="64" height="64" loading="lazy" decoding="async" data-software-icon />
@@ -277,16 +306,19 @@ const navItems = [
   <section class="section-block content-shell education-section" id="education" aria-labelledby="education-heading">
     <header class="section-heading">
       <div>
-        <h2 id="education-heading" {...copyAttrs(id('education.title'), en('education.title'))}>{id('education.title')}</h2>
-        <p {...copyAttrs(id('education.intro'), en('education.intro'))}>{id('education.intro')}</p>
+        <h2 id="education-heading" data-v6-heading data-v6-type data-v6-enter="heading:education">
+          <span class="v6-heading__source" {...copyAttrs(id('education.title'), en('education.title'))}>{id('education.title')}</span>
+          <span class="v6-heading__visual" aria-hidden="true">{headingSegments(id('education.title')).map((grapheme) => <span class="v6-heading__grapheme">{grapheme}</span>)}</span>
+        </h2>
+        <p data-v6-enter="education:intro" {...copyAttrs(id('education.intro'), en('education.intro'))}>{id('education.intro')}</p>
       </div>
     </header>
     <div class="education-columns">
       <section class="education-group" aria-labelledby="formal-heading">
-        <h3 id="formal-heading" {...copyAttrs(id('education.formal'), en('education.formal'))}>{id('education.formal')}</h3>
+        <h3 id="formal-heading" data-v6-enter="education:group:formal" {...copyAttrs(id('education.formal'), en('education.formal'))}>{id('education.formal')}</h3>
         <ol class="education-timeline">
           {formalEducation.map((entry) => (
-            <li class="education-entry" data-has-logo={String(Boolean(entry.data.logo))}>
+            <li class="education-entry" data-v6-enter={`education:${entry.id}`} data-v6-delay="0" data-has-logo={String(Boolean(entry.data.logo))}>
               <span class="education-entry__dot" aria-hidden="true"></span>
               {entry.data.logo && <img class="education-entry__logo" src={sitePath(entry.data.logo.src)} alt="" aria-hidden="true" width={entry.data.logo.width} height={entry.data.logo.height} loading="lazy" decoding="async" />}
               <div class="education-entry__content">
@@ -300,10 +332,10 @@ const navItems = [
         </ol>
       </section>
       <section class="education-group" aria-labelledby="nonformal-heading">
-        <h3 id="nonformal-heading" {...copyAttrs(id('education.nonformal'), en('education.nonformal'))}>{id('education.nonformal')}</h3>
+        <h3 id="nonformal-heading" data-v6-enter="education:group:nonformal" {...copyAttrs(id('education.nonformal'), en('education.nonformal'))}>{id('education.nonformal')}</h3>
         <ol class="education-timeline">
           {nonformalEducation.map((entry) => (
-            <li class="education-entry" data-has-logo={String(Boolean(entry.data.logo))}>
+            <li class="education-entry" data-v6-enter={`education:${entry.id}`} data-v6-delay="0" data-has-logo={String(Boolean(entry.data.logo))}>
               <span class="education-entry__dot" aria-hidden="true"></span>
               {entry.data.logo && <img class="education-entry__logo" src={sitePath(entry.data.logo.src)} alt="" aria-hidden="true" width={entry.data.logo.width} height={entry.data.logo.height} loading="lazy" decoding="async" />}
               <div class="education-entry__content">
@@ -322,21 +354,24 @@ const navItems = [
   <section class="section-block content-shell experience-section" id="experience" aria-labelledby="experience-heading">
     <header class="section-heading">
       <div>
-        <h2 id="experience-heading" {...copyAttrs(id('experience.title'), en('experience.title'))}>{id('experience.title')}</h2>
-        <p {...copyAttrs(id('experience.intro'), en('experience.intro'))}>{id('experience.intro')}</p>
+        <h2 id="experience-heading" data-v6-heading data-v6-type data-v6-enter="heading:experience">
+          <span class="v6-heading__source" {...copyAttrs(id('experience.title'), en('experience.title'))}>{id('experience.title')}</span>
+          <span class="v6-heading__visual" aria-hidden="true">{headingSegments(id('experience.title')).map((grapheme) => <span class="v6-heading__grapheme">{grapheme}</span>)}</span>
+        </h2>
+        <p data-v6-enter="experience:intro" {...copyAttrs(id('experience.intro'), en('experience.intro'))}>{id('experience.intro')}</p>
       </div>
     </header>
     <div class="experience-gallery" data-experience-gallery>
       <div class="experience-gallery__stage" data-experience-stage role="region" tabindex="0" aria-roledescription="carousel" aria-label={id('experience.galleryLabel')} data-aria-id={id('experience.galleryLabel')} data-aria-en={en('experience.galleryLabel')}>
         {experience.map((entry, index) => (
-          <button class="experience-slide" type="button" data-experience-slide data-gallery-drag-zone data-experience-index={index} data-position={index} aria-label={id('experience.openItem', { title: entry.data.organization })} data-aria-id={id('experience.openItem', { title: entry.data.organization })} data-aria-en={en('experience.openItem', { title: entry.data.organization })}>
-          <img src={sitePath(entry.data.media.src)} alt={entry.data.copy.id.imageAlt} data-alt-id={entry.data.copy.id.imageAlt} data-alt-en={entry.data.copy.en.imageAlt} width={entry.data.media.width} height={entry.data.media.height} loading={index === 0 ? 'eager' : 'lazy'} decoding="async" draggable={false} />
+          <button class="experience-slide" type="button" data-experience-slide data-gallery-drag-zone data-v6-enter={`experience-image:${entry.id}`} data-v6-enter-target="[data-experience-image]" data-v6-delay="0" data-experience-index={index} data-position={index} aria-label={id('experience.openItem', { title: entry.data.organization })} data-aria-id={id('experience.openItem', { title: entry.data.organization })} data-aria-en={en('experience.openItem', { title: entry.data.organization })}>
+          <img data-experience-image src={sitePath(entry.data.media.src)} alt={entry.data.copy.id.imageAlt} data-alt-id={entry.data.copy.id.imageAlt} data-alt-en={entry.data.copy.en.imageAlt} width={entry.data.media.width} height={entry.data.media.height} loading={index === 0 ? 'eager' : 'lazy'} decoding="async" draggable={false} />
           </button>
         ))}
       </div>
       <div class="experience-caption" data-experience-caption>
         {experience.map((entry, index) => (
-          <article class="experience-slide__copy" data-experience-copy data-experience-copy-index={index}>
+          <article class="experience-slide__copy" data-experience-copy data-experience-copy-index={index} data-v6-enter={'experience-copy:' + entry.id} data-v6-delay="0">
             <p class="experience-slide__category" {...copyAttrs(entry.data.copy.id.category, entry.data.copy.en.category)}>{entry.data.copy.id.category}</p>
             <h3>{entry.data.organization}</h3>
             <div class="experience-slide__meta">
@@ -359,10 +394,13 @@ const navItems = [
   <section class="section-block content-shell credentials-section" id="credentials" aria-labelledby="credentials-heading">
     <header class="section-heading credentials-heading">
       <div>
-        <h2 id="credentials-heading" {...copyAttrs(id('credentials.title'), en('credentials.title'))}>{id('credentials.title')}</h2>
-        <p {...copyAttrs(id('credentials.intro'), en('credentials.intro'))}>{id('credentials.intro')}</p>
+        <h2 id="credentials-heading" data-v6-heading data-v6-type data-v6-enter="heading:credentials">
+          <span class="v6-heading__source" {...copyAttrs(id('credentials.title'), en('credentials.title'))}>{id('credentials.title')}</span>
+          <span class="v6-heading__visual" aria-hidden="true">{headingSegments(id('credentials.title')).map((grapheme) => <span class="v6-heading__grapheme">{grapheme}</span>)}</span>
+        </h2>
+        <p data-v6-enter="credentials:intro" {...copyAttrs(id('credentials.intro'), en('credentials.intro'))}>{id('credentials.intro')}</p>
       </div>
-      <div class="credential-pagination" data-credential-pagination hidden>
+      <div class="credential-pagination" data-credential-pagination data-v6-enter="credentials:pagination" data-v6-delay="0" hidden>
         <span class="credential-pagination__status" data-credential-page-status role="status" aria-live="polite">{id('credentials.page', { index: 1, count: credentialPages.length })}</span>
         <button class="icon-button" type="button" data-credential-previous aria-label={id('credentials.previous')} data-aria-id={id('credentials.previous')} data-aria-en={en('credentials.previous')}>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
@@ -390,7 +428,7 @@ const navItems = [
                     alt,
                   });
                   return (
-                    <a class="credential-card" href={sitePath(media.src)} target="_blank" rel="noopener noreferrer" data-credential-open data-credential-payload={payload} aria-label={id('credentials.open', { title: title.id })} data-aria-id={id('credentials.open', { title: title.id })} data-aria-en={en('credentials.open', { title: title.en })}>
+                    <a class="credential-card" href={sitePath(media.src)} target="_blank" rel="noopener noreferrer" data-v6-enter={`credential:${item.kind}:${entry.id}`} data-v6-delay="0" data-credential-open data-credential-payload={payload} aria-label={id('credentials.open', { title: title.id })} data-aria-id={id('credentials.open', { title: title.id })} data-aria-en={en('credentials.open', { title: title.en })}>
                       <figure>
                         <img src={sitePath(media.src)} alt={alt.id} data-alt-id={alt.id} data-alt-en={alt.en} width={media.width} height={media.height} loading="lazy" decoding="async" />
                       </figure>
@@ -409,7 +447,7 @@ const navItems = [
                   alt: media.alt,
                 });
                 return (
-                  <a class="credential-card credential-card--sample" href={sitePath(media.src)} target="_blank" rel="noopener noreferrer" data-credential-open data-credential-sample="true" data-credential-payload={payload} aria-label={title.id} data-aria-id={title.id} data-aria-en={title.en}>
+                  <a class="credential-card credential-card--sample" href={sitePath(media.src)} target="_blank" rel="noopener noreferrer" data-v6-enter={`credential:${item.kind}:${entry.id}`} data-v6-delay="0" data-credential-open data-credential-sample="true" data-credential-payload={payload} aria-label={title.id} data-aria-id={title.id} data-aria-en={title.en}>
                     <figure>
                       <img src={sitePath(media.src)} alt="" width={media.width} height={media.height} loading="lazy" decoding="async" />
                     </figure>
@@ -426,12 +464,15 @@ const navItems = [
   <hr class="section-divider content-shell" aria-hidden="true" />
   <section class="contact-section content-shell" id="contact" aria-labelledby="contact-heading">
     <div class="contact-section__copy">
-      <p class="contact-section__eyebrow" {...copyAttrs(id('contact.eyebrow'), en('contact.eyebrow'))}>{id('contact.eyebrow')}</p>
-      <h2 id="contact-heading" {...copyAttrs(id('contact.title'), en('contact.title'))}>{id('contact.title')}</h2>
-      <p {...copyAttrs(id('contact.intro'), en('contact.intro'))}>{id('contact.intro')}</p>
+      <p class="contact-section__eyebrow" data-v6-enter="contact:eyebrow" {...copyAttrs(id('contact.eyebrow'), en('contact.eyebrow'))}>{id('contact.eyebrow')}</p>
+        <h2 id="contact-heading" data-v6-heading data-v6-type data-v6-enter="heading:contact">
+          <span class="v6-heading__source" {...copyAttrs(id('contact.title'), en('contact.title'))}>{id('contact.title')}</span>
+          <span class="v6-heading__visual" aria-hidden="true">{headingSegments(id('contact.title')).map((grapheme) => <span class="v6-heading__grapheme">{grapheme}</span>)}</span>
+        </h2>
+      <p data-v6-enter="contact:intro" {...copyAttrs(id('contact.intro'), en('contact.intro'))}>{id('contact.intro')}</p>
     </div>
     <div class="contact-section__actions">
-      <div class="email-card">
+      <div class="email-card" data-v6-enter="contact:email" data-v6-delay="0">
         <div class="email-card__head">
           <span class="email-card__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/></svg></span>
           <span data-copy-id={id('contact.emailCard')} data-copy-en={en('contact.emailCard')}>{id('contact.emailCard')}</span>
@@ -447,13 +488,13 @@ const navItems = [
         <span class="copy-announcement sr-only" data-copy-announcement role="status" aria-live="polite"></span>
       </div>
       <nav class="social-links" aria-label={id('contact.channels')} data-aria-id={id('contact.channels')} data-aria-en={en('contact.channels')}>
-        <a href={contact.linkedin} target="_blank" rel="noopener noreferrer" aria-label={id('contact.linkedin')} data-aria-id={id('contact.linkedin')} data-aria-en={en('contact.linkedin')}>
+        <a href={contact.linkedin} target="_blank" rel="noopener noreferrer" data-v6-enter="contact:linkedin" data-v6-delay="0" aria-label={id('contact.linkedin')} data-aria-id={id('contact.linkedin')} data-aria-en={en('contact.linkedin')}>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9v10M5 5v.01M9 19v-6a4 4 0 0 1 8 0v6M9 10v9"/></svg><span>LinkedIn</span>
         </a>
-        <a href={contact.whatsapp} target="_blank" rel="noopener noreferrer" aria-label={id('contact.whatsapp')} data-aria-id={id('contact.whatsapp')} data-aria-en={en('contact.whatsapp')}>
+        <a href={contact.whatsapp} target="_blank" rel="noopener noreferrer" data-v6-enter="contact:whatsapp" data-v6-delay="0" aria-label={id('contact.whatsapp')} data-aria-id={id('contact.whatsapp')} data-aria-en={en('contact.whatsapp')}>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11.6a8 8 0 0 1-11.8 7L4 20l1.4-4.1A8 8 0 1 1 20 11.6Z"/><path d="M9 8.5c.4 2.3 1.8 3.8 4.2 4.6l1.1-1 2 1c-.3 1.8-1.5 2.5-3.2 2.1-3-.7-5.2-2.8-5.9-5.7-.3-1.3.3-2.3 1.8-2.8L10 8.5Z"/></svg><span>WhatsApp</span>
         </a>
-        <a href={contact.github} target="_blank" rel="noopener noreferrer" aria-label={id('contact.github')} data-aria-id={id('contact.github')} data-aria-en={en('contact.github')}>
+        <a href={contact.github} target="_blank" rel="noopener noreferrer" aria-label={id('contact.github')} data-aria-id={id('contact.github')} data-aria-en={en('contact.github')} data-v6-enter="contact:github" data-v6-delay="0">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 19c-4.5 1.5-4.5-2.5-6-3m12 6v-3.9a3.4 3.4 0 0 0-.9-2.6c3-.3 6.1-1.5 6.1-6.8a5.3 5.3 0 0 0-1.4-3.7 4.9 4.9 0 0 0-.1-3.7s-1.1-.4-3.7 1.4a13 13 0 0 0-6.7 0C5.7 1 4.6 1.4 4.6 1.4a4.9 4.9 0 0 0-.1 3.7 5.3 5.3 0 0 0-1.4 3.7c0 5.3 3.1 6.5 6.1 6.8a3.4 3.4 0 0 0-.9 2.6V22"/></svg><span>GitHub</span>
         </a>
       </nav>
@@ -461,8 +502,8 @@ const navItems = [
   </section>
 
   <div class="page-footer content-shell">
-    <span data-copy-id={id('footer.copyright')} data-copy-en={en('footer.copyright')}>{id('footer.copyright')}</span>
-    <a href="#about" data-back-to-top>
+    <span data-copy-id={id('footer.copyright')} data-copy-en={en('footer.copyright')} data-v6-enter="footer:copyright">{id('footer.copyright')}</span>
+    <a href="#about" data-back-to-top data-v6-enter="footer:top">
       <span data-copy-id={id('footer.top')} data-copy-en={en('footer.top')}>{id('footer.top')}</span>
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20V5M6 11l6-6 6 6"/></svg>
     </a>

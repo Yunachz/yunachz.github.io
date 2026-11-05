@@ -9,6 +9,7 @@ import {
   wrapCoverflowOffset,
 } from '../lib/experience-coverflow';
 import { resolveSkillSelection, toggleTouchSkillSelection } from '../lib/skills-state';
+import { initializeV6Entrances, scheduleV6EntranceScan, syncV6HeadingText } from './v6-entrance';
 import {
   beginProjectTransition,
   createProjectMotionState,
@@ -74,8 +75,10 @@ function applyLocale(nextLocale: Locale): void {
   root.dataset.locale = nextLocale;
   root.lang = nextLocale;
   document.querySelectorAll<HTMLElement>('[data-copy-id][data-copy-en]').forEach((node) => {
+    if (node.closest('[data-v6-heading]')) return;
     node.textContent = nextLocale === 'id' ? node.dataset.copyId ?? '' : node.dataset.copyEn ?? '';
   });
+  syncV6HeadingText(nextLocale);
   document.querySelectorAll<HTMLElement>('[data-aria-id][data-aria-en]').forEach((node) => {
     node.setAttribute('aria-label', nextLocale === 'id' ? node.dataset.ariaId ?? '' : node.dataset.ariaEn ?? '');
   });
@@ -655,6 +658,9 @@ function makeProjectCopy(source: HTMLElement, sourceIndex: number, repeat: numbe
   copy.removeAttribute('data-project-payload');
   copy.removeAttribute('data-position');
   copy.removeAttribute('data-active');
+  copy.removeAttribute('data-v6-enter');
+  copy.removeAttribute('data-v6-enter-target');
+  copy.removeAttribute('data-v6-delay');
   copy.dataset.projectCloneIndex = String(sourceIndex);
   copy.dataset.projectCloneRepeat = String(repeat);
   copy.dataset.projectInstance = '';
@@ -902,6 +908,7 @@ filterButtons.forEach((button) => button.addEventListener('click', () => {
     filter.setAttribute('aria-pressed', String(active));
   });
   updateProjectState(true, 'filter');
+  scheduleV6EntranceScan();
 }));
 projectCarousel?.addEventListener('pointerdown', () => addProjectPauseReason('keyboard-card', false));
 projectCarousel?.addEventListener('focusin', (event) => {
@@ -981,6 +988,7 @@ let experienceSuppressClickUntil = 0;
 
 function updateExperienceState(): void {
   const count = experienceSlides.length;
+  const previousIndex = currentExperienceIndex;
   experiencePosition = normalizeCoverflowPosition(experiencePosition, count);
   currentExperienceIndex = normalizeCoverflowPosition(nearestCoverflowTarget(experiencePosition), count);
   experienceSlides.forEach((slide, index) => {
@@ -1014,6 +1022,7 @@ function updateExperienceState(): void {
       ? messages[locale]['experience.empty']
       : `${translate(locale, 'experience.position', { index: currentExperienceIndex + 1, count })}: ${experienceCopies[currentExperienceIndex]?.querySelector('h3')?.textContent ?? ''}`;
   }
+  if (currentExperienceIndex !== previousIndex) scheduleV6EntranceScan();
 }
 
 function measureExperiencePitch(): number {
@@ -1169,6 +1178,7 @@ const credentialNext = document.querySelector<HTMLButtonElement>('[data-credenti
 let currentCredentialPage = 0;
 
 updateCredentialState = (pageIndex = currentCredentialPage, announce = true): void => {
+  const previousPage = currentCredentialPage;
   const result = paginateRecords(credentialCards, pageIndex);
   currentCredentialPage = clampPageIndex(result.pageIndex, credentialPageElements.length);
   const pageCount = credentialPageElements.length;
@@ -1188,6 +1198,7 @@ updateCredentialState = (pageIndex = currentCredentialPage, announce = true): vo
   if (credentialPagination) credentialPagination.hidden = pageCount <= 1;
   if (credentialPrevious) credentialPrevious.disabled = currentCredentialPage <= 0;
   if (credentialNext) credentialNext.disabled = currentCredentialPage >= pageCount - 1;
+  if (currentCredentialPage !== previousPage) scheduleV6EntranceScan();
 };
 
 credentialPrevious?.addEventListener('click', () => updateCredentialState(currentCredentialPage - 1));
@@ -1314,6 +1325,7 @@ skillCards.forEach((card) => {
 const skillTabs = [...document.querySelectorAll<HTMLButtonElement>('[data-skill-tab]')];
 const skillPanels = [...document.querySelectorAll<HTMLElement>('[data-skill-panel]')];
 function activateSkillTab(selected: HTMLButtonElement, focus = false): void {
+  const previous = skillTabs.find((tab) => tab.getAttribute('aria-selected') === 'true');
   skillTabs.forEach((tab) => {
     const active = tab === selected;
     tab.hidden = false;
@@ -1324,6 +1336,7 @@ function activateSkillTab(selected: HTMLButtonElement, focus = false): void {
     panel.hidden = panel.dataset.skillPanel !== selected.dataset.skillTab;
   });
   if (focus) selected.focus();
+  if (previous !== selected) scheduleV6EntranceScan();
 }
 skillTabs.forEach((tab) => {
   tab.hidden = false;
@@ -1566,3 +1579,4 @@ if ('ResizeObserver' in window && projectSlides.length > 3) {
 }
 root.classList.add('js');
 applyLocale(locale);
+initializeV6Entrances();

@@ -17,8 +17,16 @@
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.7",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
     "astro": "7.4.4",
     "gray-matter": "^4.0.3",
     "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@astrojs/react": "^7.1.2",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "three": "^0.180.0"
   }
 }
