@@ -1145,8 +1145,8 @@ html.js .experience-slide[aria-hidden='true'] { pointer-events: none; }
 html.js .experience-slide:focus-visible { z-index: 7; outline-offset: 4px; }
 .experience-caption { position: relative; min-height: 0; margin-top: 12px; }
 .experience-slide__copy { max-width: 780px; margin-inline: auto; padding: 0; }
-html.js .experience-slide__copy { position: absolute; inset: 0 0 auto; opacity: 0; visibility: hidden; transform: translateY(6px); transition: opacity 220ms ease, transform 260ms var(--ease-out), visibility 0s linear 260ms; pointer-events: none; }
-html.js .experience-slide__copy[data-active='true'] { position: relative; opacity: 1; visibility: visible; transform: none; transition-delay: 0s; pointer-events: auto; }
+html.js .experience-slide__copy { position: absolute; inset: 0 0 auto; opacity: 0; visibility: hidden; transform: none; pointer-events: none; }
+html.js .experience-slide__copy[data-active='true'] { position: relative; opacity: 1; visibility: visible; transform: none; pointer-events: auto; }
 .experience-slide__category { margin: 0 0 .15rem; font-size: .78rem; letter-spacing: .015em; }
 .experience-slide__copy h3 { max-width: 42ch; font-size: clamp(1.28rem, 2vw, 1.75rem); line-height: 1.18; }
 .experience-slide__meta { gap: .25rem .8rem; margin-top: .3rem; font-size: .82rem; }
@@ -1429,7 +1429,6 @@ html.js .experience-slide[data-position='-2'] {
 html.js .experience-slide[hidden] { display: none !important; }
 html.js .experience-slide img { pointer-events: none; }
 html.js .experience-gallery__stage.is-dragging .experience-slide { transition: none; }
-html.js .experience-slide__copy[data-active='true'] { transition-duration: 180ms; }
 .experience-slide__activities { margin-top: .65rem; border-top: 0; padding-top: 0; }
 .experience-slide__activities h4 { margin-top: .45rem; }
 @media (max-width: 48rem) {
@@ -1898,9 +1897,10 @@ html[data-v6-entrance-preflight='true'] [data-v6-home] #page-title .v6-heading__
   height: 100%;
   pointer-events: none;
 }
+.hero-portrait__fallback,
+.hero-portrait__stage { transition: none; }
+.hero-portrait[data-lanyard-state='ready'] .hero-portrait__fallback { opacity: 0; }
 .hero-portrait[data-lanyard-state='ready'] .hero-portrait__stage { opacity: 1; }
-.hero-portrait[data-lanyard-state='ready']:not([data-v6-state='entering']) .hero-portrait__fallback { opacity: 0; }
-.hero-portrait[data-lanyard-state='ready'][data-v6-state='entering'] .hero-portrait__fallback { opacity: 1; }
 
 @media (max-width: 68rem) and (min-width: 48.001rem) {
   .hero-portrait__stage {

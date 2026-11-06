@@ -6,18 +6,25 @@ import {
   clampScrollProgress,
 } from '../src/lib/ambient-gradient.ts';
 import {
+  classifyCoverflowGesture,
   coverflowPose,
   coverflowPositionFromDrag,
   nearestCoverflowTarget,
   normalizeCoverflowPosition,
+  retargetCoverflowTransition,
+  sampleCoverflowTransition,
+  settleCoverflowAfterPendingInput,
   wrapCoverflowOffset,
 } from '../src/lib/experience-coverflow.ts';
+import { updateExperienceCaptionState } from '../src/lib/experience-caption-state.mjs';
+import { createFrameOwner } from '../src/lib/raf-owner.ts';
 import {
   beginProjectTransition,
   createProjectMotionState,
   getProjectIndex,
   isProjectMotionAllowed,
   mapProjectMotionToSelection,
+  PROJECT_SPEED_PX_PER_MS,
   scaleProjectMotion,
   setProjectPauseReason,
   tickProjectMotion,
@@ -63,6 +70,35 @@ test('project motion resets its monotonic clock after suspension and keeps manua
   assert.ok(Math.abs(state.phase - 605.408) < 0.01);
 });
 
+test('project autoplay keeps 88px/s phase when temporary blockers clear and user pause remains explicit', () => {
+  const state = createProjectMotionState();
+  const allowed = () => isProjectMotionAllowed(state, 5, false, true);
+  assert.equal(PROJECT_SPEED_PX_PER_MS, 0.088);
+  tickProjectMotion(state, 1000, 2020, allowed());
+  tickProjectMotion(state, 1016, 2020, allowed());
+  assert.ok(Math.abs(state.phase - 1.408) < 1e-9);
+
+  setProjectPauseReason(state, 'drag', true);
+  setProjectPauseReason(state, 'dialog', true);
+  tickProjectMotion(state, 1100, 2020, allowed());
+  const blockedPhase = state.phase;
+  setProjectPauseReason(state, 'drag', false);
+  tickProjectMotion(state, 1200, 2020, allowed());
+  assert.equal(state.phase, blockedPhase);
+  setProjectPauseReason(state, 'dialog', false);
+  tickProjectMotion(state, 1300, 2020, allowed());
+  assert.equal(state.phase, blockedPhase);
+  tickProjectMotion(state, 1316, 2020, allowed());
+  assert.ok(Math.abs(state.phase - (blockedPhase + 1.408)) < 1e-9);
+
+  state.userPaused = true;
+  tickProjectMotion(state, 1400, 2020, allowed());
+  setProjectPauseReason(state, 'drag', true);
+  setProjectPauseReason(state, 'drag', false);
+  tickProjectMotion(state, 1416, 2020, allowed());
+  assert.ok(Math.abs(state.phase - (blockedPhase + 1.408)) < 1e-9);
+});
+
 test('project resize preserves fractional phase and filter selection resets only by choice', () => {
   const state = createProjectMotionState();
   state.phase = 404 * 2.75;
@@ -92,6 +128,97 @@ test('experience drag follows the held pointer one-to-one and settles to the nea
   assert.equal(halfway.xFraction, 0.31);
   assert.ok(halfway.scale < 1 && halfway.scale > 0.84);
   assert.ok(halfway.opacity < 1 && halfway.opacity > 0.72);
+});
+
+test('pending gallery presses preserve settle ownership and semantic retargets reach an integer', () => {
+  let motion = retargetCoverflowTransition(0, undefined, 1, 9, 0);
+  const firstSettle = motion.transition;
+  assert.ok(firstSettle);
+
+  motion = settleCoverflowAfterPendingInput(motion.position, motion.transition, 70, 9);
+  assert.equal(motion.transition, firstSettle);
+  assert.ok(motion.position > 0 && motion.position < 1);
+
+  motion = settleCoverflowAfterPendingInput(motion.position, motion.transition, 110, 9);
+  assert.equal(motion.transition, firstSettle);
+  motion = retargetCoverflowTransition(motion.position, motion.transition, 1, 9, 120);
+  assert.ok(motion.transition);
+  motion = sampleCoverflowTransition(motion.position, motion.transition, 480);
+  assert.equal(motion.position, 1);
+  assert.equal(motion.transition, undefined);
+
+  motion = retargetCoverflowTransition(motion.position, motion.transition, 0, 9, 500);
+  motion = sampleCoverflowTransition(motion.position, motion.transition, 860);
+  assert.equal(motion.position, 0);
+  assert.equal(motion.transition, undefined);
+});
+
+test('gallery gesture ownership waits for horizontal intent and preserves vertical scrolling', () => {
+  assert.equal(classifyCoverflowGesture(4, 2), 'pending');
+  assert.equal(classifyCoverflowGesture(12, 2), 'horizontal');
+  assert.equal(classifyCoverflowGesture(2, 12), 'vertical');
+});
+
+test('only the leaving active caption finishes its entrance and every other copy is hidden', () => {
+  const makeCopy = (active, state, id) => {
+    const attributes = {};
+    return {
+      hidden: false,
+      inert: false,
+      dataset: { active: String(active), v6State: state, v6Enter: id },
+      setAttribute: (name, value) => { attributes[name] = value; },
+      attributes,
+    };
+  };
+  const previous = makeCopy(true, 'entering', 'experience-copy:previous');
+  const next = makeCopy(false, 'unseen', 'experience-copy:next');
+  const untouched = makeCopy(false, 'unseen', 'experience-copy:untouched');
+  const copies = [previous, next, untouched];
+  const finished = [];
+
+  updateExperienceCaptionState(copies, 1, (id) => {
+    finished.push(id);
+    const copy = copies.find((candidate) => candidate.dataset.v6Enter === id);
+    copy.dataset.v6State = 'done';
+  });
+
+  assert.deepEqual(finished, ['experience-copy:previous']);
+  assert.equal(previous.hidden, true);
+  assert.equal(previous.inert, true);
+  assert.equal(previous.attributes['aria-hidden'], 'true');
+  assert.equal(previous.dataset.v6State, 'done');
+  assert.equal(next.hidden, false);
+  assert.equal(next.inert, false);
+  assert.equal(next.attributes['aria-hidden'], 'false');
+  assert.equal(untouched.hidden, true);
+  assert.equal(untouched.dataset.v6State, 'unseen');
+  assert.equal(copies.filter((copy) => !copy.hidden).length, 1);
+});
+
+test('frame owner ignores a cancelled callback after a newer motion owns the frame', () => {
+  const callbacks = [];
+  const cancelled = [];
+  const ran = [];
+  const owner = createFrameOwner(
+    (callback) => { callbacks.push(callback); return callbacks.length; },
+    (handle) => cancelled.push(handle),
+    (timestamp) => ran.push(timestamp),
+  );
+
+  owner.schedule();
+  owner.schedule();
+  assert.equal(callbacks.length, 1);
+  const stale = callbacks[0];
+  owner.cancel();
+  owner.schedule();
+  const current = callbacks[1];
+  stale(10);
+  assert.equal(owner.pending(), true);
+  assert.deepEqual(ran, []);
+  current(20);
+  assert.equal(owner.pending(), false);
+  assert.deepEqual(ran, [20]);
+  assert.deepEqual(cancelled, [1]);
 });
 
 test('skills select by keyboard focus, touch state, then hover and touch can collapse', () => {

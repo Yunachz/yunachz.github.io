@@ -2,14 +2,21 @@ import { messages, translate, type Locale, type MessageKey } from '../lib/i18n';
 import { clampPageIndex, paginateRecords } from '../lib/credential-pagination';
 import { ambientGradientWeights, ambientOrbPositions, clampScrollProgress } from '../lib/ambient-gradient';
 import {
+  classifyCoverflowGesture,
   coverflowPose,
   coverflowPositionFromDrag,
   nearestCoverflowTarget,
   normalizeCoverflowPosition,
+  retargetCoverflowTransition,
+  sampleCoverflowTransition,
+  settleCoverflowAfterPendingInput,
+  type CoverflowTransition,
   wrapCoverflowOffset,
 } from '../lib/experience-coverflow';
+import { updateExperienceCaptionState } from '../lib/experience-caption-state.mjs';
+import { createFrameOwner } from '../lib/raf-owner';
 import { resolveSkillSelection, toggleTouchSkillSelection } from '../lib/skills-state';
-import { initializeV6Entrances, scheduleV6EntranceScan, syncV6HeadingText } from './v6-entrance';
+import { finishV6Entrance, initializeV6Entrances, scheduleV6EntranceScan, syncV6HeadingText } from './v6-entrance';
 import {
   beginProjectTransition,
   createProjectMotionState,
@@ -980,8 +987,7 @@ const experienceStage = document.querySelector<HTMLElement>('[data-experience-st
 let currentExperienceIndex = 0;
 let experiencePosition = 0;
 let experiencePitch = 0;
-let experienceFrame: number | undefined;
-let experienceTransition: { from: number; to: number; started: number; duration: number } | undefined;
+let experienceTransition: CoverflowTransition | undefined;
 type ExperienceDrag = { pointerId: number; startX: number; startY: number; startPosition: number; intent: 'pending' | 'horizontal' | 'vertical' };
 let experienceDrag: ExperienceDrag | undefined;
 let experienceSuppressClickUntil = 0;
@@ -1010,13 +1016,7 @@ function updateExperienceState(): void {
     slide.style.setProperty('--experience-opacity', String(pose.opacity));
     slide.style.setProperty('--experience-z', String(pose.zIndex));
   });
-  experienceCopies.forEach((copy, index) => {
-    const active = index === currentExperienceIndex;
-    copy.hidden = false;
-    copy.setAttribute('aria-hidden', String(!active));
-    (copy as HTMLElement & { inert: boolean }).inert = !active;
-    copy.dataset.active = String(active);
-  });
+  updateExperienceCaptionState(experienceCopies, currentExperienceIndex, finishV6Entrance);
   if (experienceStatus) {
     experienceStatus.textContent = count === 0
       ? messages[locale]['experience.empty']
@@ -1041,42 +1041,53 @@ function measureExperiencePitch(): number {
 }
 
 function cancelExperienceFrame(): void {
-  if (experienceFrame !== undefined) window.cancelAnimationFrame(experienceFrame);
-  experienceFrame = undefined;
+  experienceFrameOwner.cancel();
 }
 
 function scheduleExperienceFrame(): void {
-  if (experienceFrame === undefined && experienceTransition) experienceFrame = window.requestAnimationFrame(animateExperienceFrame);
+  if (experienceTransition) experienceFrameOwner.schedule();
 }
 
 function animateExperienceFrame(timestamp: number): void {
-  experienceFrame = undefined;
-  const transition = experienceTransition;
-  if (!transition) return;
-  const progress = Math.min(1, Math.max(0, (timestamp - transition.started) / transition.duration));
-  const eased = 1 - Math.pow(1 - progress, 3);
-  experiencePosition = transition.from + (transition.to - transition.from) * eased;
-  if (progress >= 1) {
-    experiencePosition = transition.to;
-    experienceTransition = undefined;
-  }
+  const sample = sampleCoverflowTransition(experiencePosition, experienceTransition, timestamp);
+  experiencePosition = sample.position;
+  experienceTransition = sample.transition;
   updateExperienceState();
   scheduleExperienceFrame();
 }
 
+const experienceFrameOwner = createFrameOwner(
+  (callback) => window.requestAnimationFrame(callback),
+  (handle) => window.cancelAnimationFrame(handle),
+  animateExperienceFrame,
+);
+
 function settleExperienceTo(targetIndex: number): void {
   const count = experienceSlides.length;
   if (count < 2) return;
-  const normalized = normalizeCoverflowPosition(targetIndex, count);
-  const shortestOffset = wrapCoverflowOffset(normalized, experiencePosition, count);
-  const target = experiencePosition + shortestOffset;
-  experienceTransition = { from: experiencePosition, to: target, started: performance.now(), duration: 360 };
+  const next = retargetCoverflowTransition(
+    experiencePosition,
+    experienceTransition,
+    targetIndex,
+    count,
+    performance.now(),
+    360,
+  );
+  cancelExperienceFrame();
+  experiencePosition = next.position;
+  experienceTransition = next.transition;
   updateExperienceState();
   scheduleExperienceFrame();
 }
 
 function moveExperience(direction: number): void {
   if (experienceSlides.length < 2) return;
+  if (experienceTransition) {
+    const sample = sampleCoverflowTransition(experiencePosition, experienceTransition, performance.now());
+    experiencePosition = sample.position;
+    experienceTransition = sample.transition;
+    updateExperienceState();
+  }
   settleExperienceTo(currentExperienceIndex + direction);
   experienceSlides.forEach((slide) => {
     const disclosure = slide.querySelector<HTMLDetailsElement>('details');
@@ -1089,21 +1100,21 @@ experienceSlides.forEach((slide) => slide.addEventListener('click', (event) => {
     event.stopImmediatePropagation();
     return;
   }
-  const offset = Number(slide.dataset.offset ?? 0);
-  if (Math.abs(offset) > 0.72 && Math.abs(offset) < 1.8) {
-    settleExperienceTo(Number(slide.dataset.experienceIndex ?? experienceSlides.indexOf(slide)));
+  const rawIndex = Number(slide.dataset.experienceIndex ?? experienceSlides.indexOf(slide));
+  if (!Number.isInteger(rawIndex)) return;
+  const targetIndex = normalizeCoverflowPosition(rawIndex, experienceSlides.length);
+  const motionTarget = experienceTransition
+    ? normalizeCoverflowPosition(Math.round(experienceTransition.to), experienceSlides.length)
+    : undefined;
+  if (motionTarget === targetIndex) return;
+  if (targetIndex !== currentExperienceIndex || experienceTransition || Math.abs(experiencePosition - Math.round(experiencePosition)) > 1e-6) {
+    settleExperienceTo(targetIndex);
   }
 }));
 experienceStage?.addEventListener('pointerdown', (event) => {
-  if (!event.isPrimary || (event.pointerType === 'mouse' && event.button !== 0)) return;
-  if (event.pointerType === 'mouse' && event.detail > 1 && event.cancelable) event.preventDefault();
+  if (!event.isPrimary || experienceDrag || (event.pointerType === 'mouse' && event.button !== 0)) return;
   const target = event.target instanceof Element ? event.target : experienceStage;
   if (target?.closest('summary, input, select, textarea, a, [data-experience-caption]')) return;
-  if (experienceTransition) {
-    animateExperienceFrame(performance.now());
-    experienceTransition = undefined;
-    cancelExperienceFrame();
-  }
   experiencePitch = 0;
   experienceDrag = {
     pointerId: event.pointerId,
@@ -1117,10 +1128,21 @@ experienceStage?.addEventListener('dragstart', (event) => event.preventDefault()
 experienceStage?.addEventListener('selectstart', (event) => event.preventDefault());
 experienceStage?.addEventListener('pointermove', (event) => {
   if (!experienceDrag || event.pointerId !== experienceDrag.pointerId) return;
-  const dx = event.clientX - experienceDrag.startX;
+  let dx = event.clientX - experienceDrag.startX;
   const dy = event.clientY - experienceDrag.startY;
-  if (experienceDrag.intent === 'pending' && Math.max(Math.abs(dx), Math.abs(dy)) > 6) {
-    experienceDrag.intent = Math.abs(dx) > Math.abs(dy) ? 'horizontal' : 'vertical';
+  if (experienceDrag.intent === 'pending') {
+    experienceDrag.intent = classifyCoverflowGesture(dx, dy);
+    if (experienceDrag.intent === 'horizontal') {
+      const sample = sampleCoverflowTransition(experiencePosition, experienceTransition, performance.now());
+      cancelExperienceFrame();
+      experiencePosition = sample.position;
+      experienceTransition = undefined;
+      experienceDrag.startPosition = experiencePosition;
+      experienceDrag.startX = event.clientX;
+      experienceDrag.startY = event.clientY;
+      dx = 0;
+      updateExperienceState();
+    }
     if (experienceDrag.intent === 'horizontal') {
       try { experienceStage?.setPointerCapture(event.pointerId); } catch {}
       experienceStage?.classList.add('is-dragging');
@@ -1133,22 +1155,49 @@ experienceStage?.addEventListener('pointermove', (event) => {
   if (event.cancelable) event.preventDefault();
 });
 
-function finishExperienceDrag(event: PointerEvent, cancel = false): void {
+function clearExperienceDrag(): void {
   const drag = experienceDrag;
-  if (!drag || event.pointerId !== drag.pointerId) return;
+  if (!drag) return;
   experienceDrag = undefined;
   experienceStage?.classList.remove('is-dragging');
-  if (drag.intent === 'horizontal' || (cancel && drag.intent === 'pending')) {
+  if (drag.intent === 'horizontal') {
     experienceSuppressClickUntil = Date.now() + 260;
     settleExperienceTo(nearestCoverflowTarget(experiencePosition));
+  } else {
+    const next = settleCoverflowAfterPendingInput(
+      experiencePosition,
+      experienceTransition,
+      performance.now(),
+      experienceSlides.length,
+      360,
+    );
+    const keepsCurrentOwner = Boolean(experienceTransition && next.transition === experienceTransition);
+    if (!keepsCurrentOwner) cancelExperienceFrame();
+    experiencePosition = next.position;
+    experienceTransition = next.transition;
+    updateExperienceState();
+    scheduleExperienceFrame();
   }
-  if (experienceStage?.hasPointerCapture(event.pointerId)) {
-    try { experienceStage.releasePointerCapture(event.pointerId); } catch {}
+  if (experienceStage?.hasPointerCapture(drag.pointerId)) {
+    try { experienceStage.releasePointerCapture(drag.pointerId); } catch {}
   }
 }
-experienceStage?.addEventListener('pointerup', (event) => finishExperienceDrag(event));
-experienceStage?.addEventListener('pointercancel', (event) => finishExperienceDrag(event, true));
-experienceStage?.addEventListener('lostpointercapture', (event) => finishExperienceDrag(event, true));
+function finishExperienceDrag(event: PointerEvent): void {
+  if (experienceDrag?.pointerId === event.pointerId) clearExperienceDrag();
+}
+document.addEventListener('pointerup', finishExperienceDrag);
+document.addEventListener('pointercancel', finishExperienceDrag);
+experienceStage?.addEventListener('lostpointercapture', finishExperienceDrag);
+document.addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape' || !experienceDrag) return;
+  event.preventDefault();
+  clearExperienceDrag();
+});
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) clearExperienceDrag();
+});
+window.addEventListener('blur', clearExperienceDrag);
+window.addEventListener('pagehide', clearExperienceDrag);
 experienceStage?.addEventListener('click', (event) => {
   if (Date.now() >= experienceSuppressClickUntil) return;
   event.preventDefault();

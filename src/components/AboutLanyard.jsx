@@ -38,17 +38,14 @@ export default function AboutLanyard({ frontImage, backImage, strapImage, settin
     mountedRef.current = true;
     const motionPreference = window.matchMedia?.('(prefers-reduced-motion: reduce)');
     let active = true;
-    let importDelayTimer;
-    let idleFallbackTimer;
-    let idleCallback;
+    let importFrame;
+    let headingObserver;
 
     const cancelScheduledImport = () => {
-      window.clearTimeout(importDelayTimer);
-      window.clearTimeout(idleFallbackTimer);
-      if (idleCallback !== undefined) window.cancelIdleCallback?.(idleCallback);
-      importDelayTimer = undefined;
-      idleFallbackTimer = undefined;
-      idleCallback = undefined;
+      if (importFrame !== undefined) window.cancelAnimationFrame(importFrame);
+      importFrame = undefined;
+      headingObserver?.disconnect();
+      headingObserver = undefined;
     };
 
     const updateSceneSize = () => {
@@ -83,7 +80,6 @@ export default function AboutLanyard({ frontImage, backImage, strapImage, settin
       const generation = ++generationRef.current;
       cancelScheduledImport();
       if (!motionPreference || motionPreference.matches) {
-        hasStartedRef.current = true;
         publish('reduced');
         return;
       }
@@ -91,10 +87,12 @@ export default function AboutLanyard({ frontImage, backImage, strapImage, settin
       publish('loading');
       setEnabled(true);
       setIntro(!hasStartedRef.current);
-      hasStartedRef.current = true;
       window.clearTimeout(timeoutRef.current);
       timeoutRef.current = window.setTimeout(() => {
-        if (active && generationRef.current === generation) publish('error');
+        if (active && generationRef.current === generation) {
+          cancelScheduledImport();
+          publish('error');
+        }
       }, 12000);
 
       const loadLanyard = () => {
@@ -109,17 +107,24 @@ export default function AboutLanyard({ frontImage, backImage, strapImage, settin
             if (active && generationRef.current === generation) publish('error');
           });
       };
-      importDelayTimer = window.setTimeout(() => {
-        importDelayTimer = undefined;
-        if (typeof window.requestIdleCallback === 'function') {
-          idleCallback = window.requestIdleCallback(() => {
-            idleCallback = undefined;
-            loadLanyard();
-          }, { timeout: 1200 });
-        } else {
-          idleFallbackTimer = window.setTimeout(loadLanyard, 0);
-        }
-      }, 620);
+      const scheduleLanyardImport = () => {
+        importFrame = window.requestAnimationFrame(() => {
+          importFrame = undefined;
+          loadLanyard();
+        });
+      };
+      const heading = document.querySelector('#page-title');
+      if (!heading || heading.dataset.v6HeadingState === 'done') {
+        scheduleLanyardImport();
+      } else {
+        headingObserver = new MutationObserver(() => {
+          if (heading.dataset.v6HeadingState !== 'done') return;
+          headingObserver?.disconnect();
+          headingObserver = undefined;
+          scheduleLanyardImport();
+        });
+        headingObserver.observe(heading, { attributes: true, attributeFilter: ['data-v6-heading-state'] });
+      }
     };
 
     updateMotionPreference();
@@ -156,6 +161,7 @@ export default function AboutLanyard({ frontImage, backImage, strapImage, settin
           backImage={backImage}
           strapImage={strapImage}
           intro={intro}
+          onIntroStart={() => { hasStartedRef.current = true; }}
           onStatus={reportCanvasStatus}
           className="about-lanyard__scene"
         />

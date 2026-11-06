@@ -1,4 +1,4 @@
-import { createOnceLedger, headingTiming, headingVisibleCount, segmentGraphemes } from '../lib/v6-entrance-state.mjs';
+import { createOnceLedger, headingTiming, headingVisibleCount, isLanyardHandoffEligible, segmentGraphemes } from '../lib/v6-entrance-state.mjs';
 import type { Locale } from '../lib/i18n';
 
 type EntryId = string;
@@ -19,9 +19,14 @@ let controllerStarted = false;
 let ledger: ReturnType<typeof createOnceLedger> | undefined;
 let entranceObserver: IntersectionObserver | undefined;
 let scheduleVisibleScanCallback: (() => void) | undefined;
+let finishEntryCallback: ((id: EntryId) => void) | undefined;
 
 export function scheduleV6EntranceScan(): void {
   scheduleVisibleScanCallback?.();
+}
+
+export function finishV6Entrance(id: string): void {
+  finishEntryCallback?.(id);
 }
 
 function entryId(element: HTMLElement): EntryId | undefined {
@@ -252,6 +257,13 @@ export function initializeV6Entrances(): void {
   });
   root.dataset.v6EntrancesReady = 'true';
   const abort = new AbortController();
+  const finishOwnedEntry = (id: EntryId): void => {
+    if (aliases.has(id)) finishEntry(id, aliases);
+  };
+  finishEntryCallback = finishOwnedEntry;
+  abort.signal.addEventListener('abort', () => {
+    if (finishEntryCallback === finishOwnedEntry) finishEntryCallback = undefined;
+  }, { once: true });
   const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
   let headerObserver: ResizeObserver | undefined;
   let scanFrame: number | undefined;
@@ -371,12 +383,21 @@ export function initializeV6Entrances(): void {
       finishEntry(id, aliases);
       return;
     }
-    if (!ledger.begin(id)) return;
     const group = aliases.get(id) ?? [];
+    const readyLanyard = id === 'hero:lanyard'
+      ? group.find((target) => target.dataset.v6RequiresReady === 'true')
+      : undefined;
+    if (readyLanyard?.dataset.lanyardState === 'ready'
+      && !isLanyardHandoffEligible(readyLanyard.dataset.lanyardState, targetIsVisible(readyLanyard))) return;
+    if (!ledger.begin(id)) return;
     group.forEach((target) => {
       entranceObserver?.unobserve(target);
       target.dataset.v6State = 'entering';
     });
+    if (readyLanyard?.dataset.lanyardState === 'ready') {
+      finishEntry(id, aliases);
+      return;
+    }
     const heading = group.find((target) => target.matches('[data-v6-type]'));
     if (heading) {
       startHeading(heading, id);
@@ -396,8 +417,12 @@ export function initializeV6Entrances(): void {
     const selected = new Map<EntryId, HTMLElement>();
     candidates.forEach((target) => {
       const id = entryId(target);
-      const visual = animationElement(target);
-      if (!id || ledger?.state(id) !== 'unseen' || !visual || !targetIsVisible(visual) || selected.has(id)) return;
+      const stableLanyardTarget = id === 'hero:lanyard' && target.dataset.lanyardState === 'ready';
+      const visual = stableLanyardTarget ? target : animationElement(target);
+      const visible = stableLanyardTarget
+        ? isLanyardHandoffEligible(target.dataset.lanyardState, targetIsVisible(target))
+        : Boolean(visual && targetIsVisible(visual));
+      if (!id || ledger?.state(id) !== 'unseen' || !visual || !visible || selected.has(id)) return;
       selected.set(id, target);
     });
     Array.from(selected.entries())

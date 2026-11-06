@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
+import { shouldRehangLanyardOnFrameChange, shouldRevealLanyardFrame } from '../../lib/lanyard-startup-state.mjs';
 
 import './Lanyard.css';
 
@@ -724,13 +725,16 @@ const Lanyard = ({
   intro = true,
   className = '',
   style,
+  onIntroStart,
   onStatus
 }) => {
   const containerRef = useRef(null);
   const inputRef = useRef(null);
   const settingsRef = useRef(null);
   const applyRef = useRef(null);
+  const introStartRef = useRef(onIntroStart);
   const statusRef = useRef(onStatus);
+  introStartRef.current = onIntroStart;
   statusRef.current = onStatus;
 
   settingsRef.current = {
@@ -766,6 +770,14 @@ const Lanyard = ({
     const inputArea = inputRef.current;
     if (!inputArea) return undefined;
 
+    const imageCache = new Map();
+    const initialSettings = settingsRef.current;
+    void Promise.all([
+      loadImage(imageCache, initialSettings.frontImage),
+      loadImage(imageCache, initialSettings.backImage),
+      loadImage(imageCache, initialSettings.strapImage)
+    ]);
+
     let renderer;
     try {
       renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
@@ -794,7 +806,6 @@ const Lanyard = ({
     fillLight.position.set(3, -1, 4);
     scene.add(keyLight, fillLight);
 
-    const imageCache = new Map();
     const images = { front: null, back: null, strap: null };
     const frontCanvas = document.createElement('canvas');
     const backCanvas = document.createElement('canvas');
@@ -893,6 +904,24 @@ const Lanyard = ({
     let readyReported = false;
     let imageToken = 0;
     const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    let introPending = Boolean(settingsRef.current.intro && !reducedMotion);
+    let introStarted = !introPending;
+    let introAdvanced = !introPending;
+    const introTarget = container.closest('.hero-portrait');
+    const introTargetVisible = () => {
+      if (!introTarget) return true;
+      const rect = introTarget.getBoundingClientRect();
+      const header = document.querySelector('.site-header');
+      const headerRect = header?.getBoundingClientRect();
+      const visibleLeft = Math.max(0, rect.left);
+      const visibleRight = Math.min(window.innerWidth, rect.right);
+      const visibleTop = Math.max(rect.top, headerRect && headerRect.top <= 1 ? headerRect.bottom : 0);
+      const visibleBottom = Math.min(window.innerHeight, rect.bottom);
+      const visibleWidth = visibleRight - visibleLeft;
+      const visibleHeight = visibleBottom - visibleTop;
+      const requiredArea = Math.min(6000, Math.max(600, rect.width * rect.height * 0.12));
+      return visibleWidth >= 8 && visibleHeight >= 12 && visibleWidth * visibleHeight >= requiredArea;
+    };
 
     const paintFaces = () => {
       const s = settingsRef.current;
@@ -970,9 +999,15 @@ const Lanyard = ({
       if (framingKey !== applied.framingKey) {
         frameView();
         if (!placed) {
-          placeHanging(sim, layout, s.intro && !reducedMotion);
+          placeHanging(sim, layout, false);
           placed = true;
         } else if (layoutKey !== applied.layoutKey) {
+          placeHanging(sim, layout, false);
+        } else if (shouldRehangLanyardOnFrameChange({
+          framingChanged: true,
+          placed,
+          grabbed: Boolean(sim.grab),
+        })) {
           placeHanging(sim, layout, false);
         }
       }
@@ -1144,13 +1179,32 @@ const Lanyard = ({
       inputArea.style.pointerEvents = settingsRef.current.interactive ? 'auto' : 'none';
     };
 
+    const startIntro = () => {
+      if (!introPending || !imagesReady || !introTargetVisible()) return false;
+      introPending = false;
+      introStarted = true;
+      introAdvanced = false;
+      introObserver?.disconnect();
+      introStartRef.current?.();
+      sim.body.velocity.x += 0.7;
+      sim.body.angular.z += 1.2;
+      sim.calm = 0;
+      return true;
+    };
+
     const render = () => {
       cardGroup.position.copy(sim.body.position);
       cardGroup.quaternion.copy(sim.body.quaternion);
       updateBand();
       renderer.render(scene, camera);
       updateHitArea();
-      if (imagesReady && !readyReported && renderer.info.render.triangles > 0) {
+      if (!readyReported && shouldRevealLanyardFrame({
+        imagesReady,
+        hasRenderedScene: renderer.info.render.triangles > 0,
+        introPending,
+        introStarted,
+        introAdvanced,
+      })) {
         readyReported = true;
         statusRef.current?.('ready');
       }
@@ -1186,11 +1240,13 @@ const Lanyard = ({
     const tick = now => {
       raf = 0;
       if (!alive || !visible || document.hidden || contextLost) return;
+      startIntro();
       const dt = Math.min(1 / 30, Math.max(1 / 240, (now - last) / 1000));
       last = now;
       time += dt;
       const current = physics();
       stepSimulation(sim, dt, current, time);
+      if (introStarted) introAdvanced = true;
       const body = sim.body;
       if (!Number.isFinite(body.position.x + body.position.y + body.position.z + body.quaternion.w)) {
         sim.grab = null;
@@ -1286,6 +1342,13 @@ const Lanyard = ({
       if (!toPointer(event)) return;
       const hit = pickCard();
       if (!hit) return;
+      if (introPending) {
+        introPending = false;
+        introStarted = true;
+        introAdvanced = false;
+        introObserver?.disconnect();
+        introStartRef.current?.();
+      }
       sim.grab = {
         local: hit.point.clone().sub(sim.body.position).applyQuaternion(sim.body.quaternion.clone().invert()),
         rotation: sim.body.quaternion.clone(),
@@ -1368,6 +1431,12 @@ const Lanyard = ({
       else pause();
     });
     intersectionObserver.observe(container);
+    const introObserver = introPending && introTarget
+      ? new IntersectionObserver(([entry]) => {
+          if (entry.isIntersecting && visible && !document.hidden && !contextLost) start();
+        })
+      : undefined;
+    if (introTarget) introObserver?.observe(introTarget);
     const onVisibility = () => {
       if (document.hidden) pause();
       else if (visible && !contextLost) start();
@@ -1389,6 +1458,7 @@ const Lanyard = ({
       applyRef.current = null;
       resizeObserver.disconnect();
       intersectionObserver.disconnect();
+      introObserver?.disconnect();
       document.removeEventListener('visibilitychange', onVisibility);
       document.removeEventListener('keydown', onEscape);
       inputArea?.removeEventListener('pointerdown', onPointerDown);

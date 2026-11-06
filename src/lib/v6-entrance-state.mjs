@@ -52,6 +52,10 @@ export function headingVisibleCount(elapsed, interval, graphemeCount) {
   return Math.min(count, Math.max(1, Math.floor(time / step) + 1));
 }
 
+export function isLanyardHandoffEligible(status, stableFigureVisible) {
+  return status === 'ready' && stableFigureVisible;
+}
+
 export function createOnceLedger(ids = []) {
   const states = new Map(ids.map((id) => [id, 'unseen']));
   return {

@@ -6,6 +6,18 @@ export type CoverflowPose = {
   zIndex: number;
 };
 
+export type CoverflowTransition = {
+  from: number;
+  to: number;
+  started: number;
+  duration: number;
+};
+
+export type CoverflowMotion = {
+  position: number;
+  transition: CoverflowTransition | undefined;
+};
+
 export function normalizeCoverflowPosition(position: number, count: number): number {
   return count > 0 ? ((position % count) + count) % count : 0;
 }
@@ -24,6 +36,70 @@ export function coverflowPositionFromDrag(startPosition: number, deltaX: number,
 
 export function nearestCoverflowTarget(position: number): number {
   return Math.round(position);
+}
+
+export function sampleCoverflowTransition(
+  position: number,
+  transition: CoverflowTransition | undefined,
+  timestamp: number,
+): CoverflowMotion {
+  if (!transition) return { position, transition: undefined };
+  const duration = Math.max(1, transition.duration);
+  const progress = Math.min(1, Math.max(0, (timestamp - transition.started) / duration));
+  const eased = 1 - Math.pow(1 - progress, 3);
+  if (progress >= 1) return { position: transition.to, transition: undefined };
+  return {
+    position: transition.from + (transition.to - transition.from) * eased,
+    transition,
+  };
+}
+
+export function retargetCoverflowTransition(
+  position: number,
+  transition: CoverflowTransition | undefined,
+  targetIndex: number,
+  count: number,
+  timestamp: number,
+  duration = 360,
+): CoverflowMotion {
+  if (count < 1) return { position: 0, transition: undefined };
+  const sampled = sampleCoverflowTransition(position, transition, timestamp);
+  if (count === 1) return { position: 0, transition: undefined };
+  const normalized = normalizeCoverflowPosition(targetIndex, count);
+  const unroundedTarget = sampled.position + wrapCoverflowOffset(normalized, sampled.position, count);
+  const nearestInteger = Math.round(unroundedTarget);
+  const target = Math.abs(unroundedTarget - nearestInteger) < 1e-9 ? nearestInteger : unroundedTarget;
+  if (Math.abs(target - sampled.position) < 1e-6 || duration <= 0) {
+    return { position: target, transition: undefined };
+  }
+  return {
+    position: sampled.position,
+    transition: { from: sampled.position, to: target, started: timestamp, duration },
+  };
+}
+
+export function settleCoverflowAfterPendingInput(
+  position: number,
+  transition: CoverflowTransition | undefined,
+  timestamp: number,
+  count: number,
+  duration = 360,
+): CoverflowMotion {
+  const sampled = sampleCoverflowTransition(position, transition, timestamp);
+  if (sampled.transition || count < 2) return sampled;
+  return retargetCoverflowTransition(
+    sampled.position,
+    undefined,
+    nearestCoverflowTarget(sampled.position),
+    count,
+    timestamp,
+    duration,
+  );
+}
+
+export function classifyCoverflowGesture(deltaX: number, deltaY: number, threshold = 6): 'pending' | 'horizontal' | 'vertical' {
+  if (Math.max(Math.abs(deltaX), Math.abs(deltaY)) <= threshold) return 'pending';
+  return Math.abs(deltaX) > Math.abs(deltaY) ? 'horizontal' : 'vertical';
 }
 
 export function coverflowPose(offset: number): CoverflowPose {
