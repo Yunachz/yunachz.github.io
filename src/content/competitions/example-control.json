@@ -1,0 +1,23 @@
+{
+  "order": 40,
+  "draft": false,
+  "isDummy": true,
+  "outcome": "participant",
+  "copy": {
+    "id": {
+      "title": "Contoh tantangan sistem kontrol",
+      "status": "Belum meraih penghargaan — pengalaman untuk langkah berikutnya.",
+      "description": "Contoh aktivitas: mencoba strategi kendali dan mengevaluasi respons sistem."
+    },
+    "en": {
+      "title": "Example control systems challenge",
+      "status": "No award this time — experience for the next step.",
+      "description": "Example activity: trying control strategies and evaluating the system response."
+    }
+  },
+  "photos": [
+    { "src": "assets/placeholders/skill-control.svg", "width": 1200, "height": 750, "kind": "placeholder", "alt": { "id": "Ilustrasi contoh tantangan sistem kontrol, foto 1 dari 3", "en": "Example control systems challenge illustration, photo 1 of 3" } },
+    { "src": "assets/placeholders/experience-electrical-competition.svg", "width": 1200, "height": 750, "kind": "placeholder", "alt": { "id": "Ilustrasi placeholder strategi kendali, foto 2 dari 3", "en": "Control strategy placeholder illustration, photo 2 of 3" } },
+    { "src": "assets/placeholders/experience-ksm-iot.svg", "width": 1200, "height": 750, "kind": "placeholder", "alt": { "id": "Ilustrasi placeholder pengujian sistem, foto 3 dari 3", "en": "System testing placeholder illustration, photo 3 of 3" } }
+  ]
+}

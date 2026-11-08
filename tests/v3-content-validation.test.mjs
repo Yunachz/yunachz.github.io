@@ -114,6 +114,44 @@ test('sample layout cards validate separately and do not change the six credenti
   assert.throws(() => validateV3Content(fabricated), /sample tidak boleh memuat issuer/);
 });
 
+test('four published dummy competition records are localized, labelled, and use three local placeholders', () => {
+  const snapshot = cloneSource();
+  const counts = validateV3Content(snapshot);
+  const dummyRecords = snapshot.competitions.filter(({ data }) => data.isDummy && data.draft === false);
+  assert.equal(dummyRecords.length, 4);
+  assert.equal(counts.competitions, 4);
+  assert.deepEqual(dummyRecords.map(({ id }) => id).sort(), [
+    'example-automation', 'example-control', 'example-iot', 'example-robotics',
+  ]);
+  for (const { data } of dummyRecords) {
+    assert.equal(data.photos.length, 3);
+    for (const locale of ['id', 'en']) {
+      assert.ok(data.copy[locale].title);
+      assert.ok(data.copy[locale].status);
+      assert.ok(data.copy[locale].description);
+    }
+    assert.ok(data.photos.every((photo) => photo.kind === 'placeholder' && photo.src.startsWith('assets/placeholders/')));
+  }
+});
+
+test('competition content rejects missing localized status, external media, and missing dummy examples', () => {
+  const missingStatus = cloneSource();
+  const first = missingStatus.competitions.find(({ id }) => id === 'example-automation');
+  if (!first) throw new Error('Automation example fixture is missing.');
+  first.data.copy.en.status = ' ';
+  assert.throws(() => validateV3Content(missingStatus), /copy\.en\.status wajib berisi teks/);
+
+  const externalPhoto = cloneSource();
+  const record = externalPhoto.competitions.find(({ id }) => id === 'example-iot');
+  if (!record) throw new Error('IoT example fixture is missing.');
+  record.data.photos[0].src = 'https://example.com/photo.jpg';
+  assert.throws(() => validateV3Content(externalPhoto), /photos\[0\] media\.src harus berada di public\/assets\//);
+
+  const missingExample = cloneSource();
+  missingExample.competitions = missingExample.competitions.filter(({ id }) => id !== 'example-control');
+  assert.throws(() => validateV3Content(missingExample), /tepat empat contoh kompetisi dummy/);
+});
+
 test('skill group registry rejects duplicate, unmapped, and unknown canonical skill references', () => {
   const duplicated = cloneSource();
   const secondGroup = duplicated.skillGroups.find(({ id }) => id === 'embedded-electronics');

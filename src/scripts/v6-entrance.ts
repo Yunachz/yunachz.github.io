@@ -287,9 +287,32 @@ export function initializeV6Entrances(): void {
     if (target.matches('[data-v6-type]')) return undefined;
     if (typeof visual.animate !== 'function') return undefined;
 
-    const safe = target.dataset.v6Safe === 'true' || Boolean(visual.closest('a, button, input, select, textarea, summary, [role="button"], [role="tab"]'));
-    const startOpacity = safe ? 0.72 : 0;
-    const travel = safe ? '0px 5px' : '0px 14px';
+    const safe = target.dataset.v6Safe === 'true' || Boolean(target.closest('a, button, input, select, textarea, summary, [role="button"], [role="tab"]'));
+    const preset = ['copy', 'editorial', 'competition-media', 'competition-copy', 'credential'].includes(target.dataset.v6Preset ?? '')
+      ? target.dataset.v6Preset
+      : undefined;
+    let startOpacity = safe ? 0.72 : 0;
+    let travel = safe ? '0px 5px' : '0px 14px';
+    let duration = safe ? 360 : 560;
+    if (!safe && preset === 'copy') {
+      travel = '0px 12px';
+      duration = 480;
+    } else if (!safe && preset === 'editorial') {
+      travel = '0px 14px';
+      duration = 520;
+    } else if (!safe && preset === 'competition-copy') {
+      travel = '0px 12px';
+      duration = 520;
+    } else if (!safe && preset === 'competition-media') {
+      const row = target.closest<HTMLElement>('.competition-row');
+      const siblings = row?.parentElement ? Array.from(row.parentElement.children) : [];
+      const horizontalSign = row && (siblings.indexOf(row) + 1) % 2 === 0 ? 1 : -1;
+      travel = window.matchMedia('(max-width: 48rem)').matches ? '0px 12px' : `${horizontalSign * 18}px 0px`;
+      duration = 520;
+    } else if (!safe && preset === 'credential') {
+      travel = '0px 12px';
+      duration = 480;
+    }
     const keyframes: Keyframe[] = CSS.supports?.('translate', '0px 1px')
       ? [
           { opacity: startOpacity, translate: travel },
@@ -299,7 +322,7 @@ export function initializeV6Entrances(): void {
 
     try {
       const animation = visual.animate(keyframes, {
-        duration: safe ? 360 : 560,
+        duration,
         delay,
         easing: 'cubic-bezier(0.16, 1, 0.3, 1)',
         fill: 'both',
@@ -425,11 +448,19 @@ export function initializeV6Entrances(): void {
       if (!id || ledger?.state(id) !== 'unseen' || !visual || !visible || selected.has(id)) return;
       selected.set(id, target);
     });
+    const groupCounts = new Map<string, number>();
     Array.from(selected.entries())
       .sort((left, right) => left[1].getBoundingClientRect().top - right[1].getBoundingClientRect().top)
-      .forEach(([id, target], index) => {
+      .forEach(([id, target]) => {
         const specified = Number.parseFloat(target.dataset.v6Delay ?? '');
-        const delay = Number.isFinite(specified) ? Math.min(240, Math.max(0, specified)) : Math.min(180, index * 36);
+        const safe = target.dataset.v6Safe === 'true' || Boolean(target.closest('a, button, input, select, textarea, summary, [role="button"], [role="tab"]'));
+        const section = target.closest<HTMLElement>('[data-v6-stagger-group], section[id]');
+        const group = section?.dataset.v6StaggerGroup || section?.id || 'document';
+        const groupIndex = groupCounts.get(group) ?? 0;
+        if (!safe) groupCounts.set(group, groupIndex + 1);
+        const delay = Number.isFinite(specified)
+          ? Math.min(240, Math.max(0, specified))
+          : safe ? 0 : Math.min(160, groupIndex * 40);
         startEntry(id, delay);
       });
   };

@@ -8,5 +8,6 @@ console.log(
   counts.software + ' software apps, ' +
   counts.experience + ' experiences, ' +
   counts.education + ' education entries, ' +
-  counts.credentials + ' certificates.'
+  counts.credentials + ' certificates, ' +
+  counts.competitions + ' competitions.'
 );

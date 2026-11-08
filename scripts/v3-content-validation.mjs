@@ -13,7 +13,9 @@ const photoDirectories = {
   skill: 'assets/skills/',
   experience: 'assets/experience/',
   credential: 'assets/certificates/',
+  competition: 'assets/competitions/',
 };
+const expectedDummyCompetitionIds = new Set(['example-automation', 'example-iot', 'example-robotics', 'example-control']);
 const prohibitedPublicCopy = /tercantum pada CV|telah diverifikasi|batas informasi|audit dokumentasi|verifikasi proyek/i;
 
 function requireCondition(condition, message) {
@@ -111,6 +113,7 @@ export async function loadV3Content(rootDirectory = process.cwd()) {
     education: await jsonCollection('education'),
     credentials: await jsonCollection('credentials'),
     credentialSamples: await jsonCollection('credential-samples'),
+    competitions: await jsonCollection('competitions'),
     categoryRegistry: JSON.parse(await readFile(path.join(root, 'src/lib/project-categories.json'), 'utf8')),
     publicRoot,
     aboutDraft: about.data.draft,
@@ -118,8 +121,8 @@ export async function loadV3Content(rootDirectory = process.cwd()) {
 }
 
 export function validateV3Content(snapshot) {
-  const { projects, siteEntries, skills, skillGroups, software, experience, education, credentials, credentialSamples, categoryRegistry, publicRoot, aboutDraft } = snapshot;
-  const collections = { projects, skills, skillGroups, software, experience, education, credentials, credentialSamples };
+  const { projects, siteEntries, skills, skillGroups, software, experience, education, credentials, credentialSamples, competitions, categoryRegistry, publicRoot, aboutDraft } = snapshot;
+  const collections = { projects, skills, skillGroups, software, experience, education, credentials, credentialSamples, competitions };
   for (const [name, entries] of Object.entries(collections)) requireCondition(Array.isArray(entries), `${name} harus berupa daftar`);
 
   const categoryIds = new Set();
@@ -280,6 +283,40 @@ export function validateV3Content(snapshot) {
     }
   }
 
+  const competitionIds = new Set();
+  const dummyCompetitionIds = new Set();
+  for (const { source, id, data } of competitions) {
+    requireCondition(typeof id === 'string' && slugPattern.test(id), `${source}: ID kompetisi tidak valid`);
+    requireCondition(!competitionIds.has(id), `${source}: ID kompetisi duplikat ${id}`);
+    competitionIds.add(id);
+    requireCondition(Number.isInteger(data.order), `${source}: order harus bilangan bulat`);
+    requireCondition(typeof data.draft === 'boolean', `${source}: draft harus boolean`);
+    requireCondition(typeof data.isDummy === 'boolean', `${source}: isDummy harus boolean`);
+    requireCondition(['winner', 'award', 'finalist', 'participant'].includes(data.outcome), `${source}: outcome tidak valid`);
+    for (const locale of ['id', 'en']) {
+      for (const field of ['title', 'status', 'description']) requireText(data.copy?.[locale]?.[field], `${source} copy.${locale}.${field}`);
+    }
+    requireCondition(Array.isArray(data.photos) && data.photos.length > 0, `${source}: photos harus berisi sedikitnya satu foto`);
+    data.photos.forEach((photo, index) => {
+      const photoSource = `${source} photos[${index}]`;
+      requireMedia(photo, photoSource, publicRoot, 'competition');
+      requireLocalized(photo.alt, `${photoSource} alt`);
+      if (data.isDummy) {
+        requireCondition(data.photos.length === 3, `${source}: setiap contoh dummy harus memuat tepat tiga foto`);
+        requireCondition(photo.kind === 'placeholder', `${photoSource}: kompetisi dummy hanya boleh memakai placeholder`);
+        requireCondition(String(photo.src).replace(/^\/+/, '').startsWith('assets/placeholders/'), `${photoSource}: kompetisi dummy harus memakai aset placeholder`);
+      }
+    });
+    if (data.isDummy) {
+      requireCondition(data.draft === false, `${source}: contoh dummy yang ditampilkan harus terbit`);
+      requireCondition(expectedDummyCompetitionIds.has(id), `${source}: ID contoh dummy tidak diizinkan ${id}`);
+      dummyCompetitionIds.add(id);
+    }
+  }
+  requireCondition(dummyCompetitionIds.size === expectedDummyCompetitionIds.size
+    && [...expectedDummyCompetitionIds].every((id) => dummyCompetitionIds.has(id)),
+  'Harus ada tepat empat contoh kompetisi dummy yang disetujui');
+
   const softwareIds = new Set();
   const softwareNames = new Set();
   for (const { source, id, data } of software) {
@@ -312,5 +349,6 @@ export function validateV3Content(snapshot) {
     experience: published(experience).length,
     education: published(education).length,
     credentials: published(credentials).length,
+    competitions: published(competitions).length,
   };
 }

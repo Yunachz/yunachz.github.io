@@ -124,6 +124,7 @@ function applyLocale(nextLocale: Locale): void {
   updateProjectState(false, 'render');
   updateExperienceState();
   updateCredentialState(undefined, false);
+  document.dispatchEvent(new CustomEvent('portfolio:localechange', { detail: { locale: nextLocale } }));
 }
 
 localeToggle?.addEventListener('click', () => applyLocale(locale === 'id' ? 'en' : 'id'));
@@ -1247,6 +1248,9 @@ updateCredentialState = (pageIndex = currentCredentialPage, announce = true): vo
   if (credentialPagination) credentialPagination.hidden = pageCount <= 1;
   if (credentialPrevious) credentialPrevious.disabled = currentCredentialPage <= 0;
   if (credentialNext) credentialNext.disabled = currentCredentialPage >= pageCount - 1;
+  document.dispatchEvent(new CustomEvent('portfolio:credentialpagechange', {
+    detail: { page: currentCredentialPage, count: pageCount },
+  }));
   if (currentCredentialPage !== previousPage) scheduleV6EntranceScan();
 };
 

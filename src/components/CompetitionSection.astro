@@ -1,0 +1,103 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import { chunkRecords } from '../lib/credential-pagination';
+import { segmentGraphemes } from '../lib/v6-entrance-state.mjs';
+import { translate, type MessageKey } from '../lib/i18n';
+import { sitePath } from '../lib/urls';
+
+interface Props {
+  records: CollectionEntry<'competitions'>[];
+}
+
+const records = Astro.props.records;
+const pages = chunkRecords(records, 3);
+const id = (key: MessageKey, params?: Record<string, string | number>) => translate('id', key, params);
+const en = (key: MessageKey, params?: Record<string, string | number>) => translate('en', key, params);
+const copyAttrs = (indonesian: string, english: string) => ({ 'data-copy-id': indonesian, 'data-copy-en': english });
+const ariaAttrs = (indonesian: string, english: string) => ({ 'data-aria-id': indonesian, 'data-aria-en': english });
+const titleId = id('competitions.title');
+---
+
+<section class="section-block content-shell competitions-section" id="competitions" aria-labelledby="competitions-heading" data-competition-section>
+  <header class="section-heading competitions-heading">
+    <div>
+      <h2 id="competitions-heading" data-v6-heading data-v6-type data-v6-enter="heading:competitions">
+        <span class="v6-heading__source" {...copyAttrs(titleId, en('competitions.title'))}>{titleId}</span>
+        <span class="v6-heading__visual" aria-hidden="true">{segmentGraphemes(titleId, 'id').map((grapheme) => <span class="v6-heading__grapheme">{grapheme}</span>)}</span>
+      </h2>
+      <p data-v6-enter="competitions:intro" {...copyAttrs(id('competitions.intro'), en('competitions.intro'))}>{id('competitions.intro')}</p>
+    </div>
+    <div class="competition-pagination" data-competition-pagination hidden>
+      <span class="competition-pagination__status" data-competition-page-status role="status" aria-live="polite">{id('competitions.page', { index: 1, count: pages.length })}</span>
+      <button class="icon-button" type="button" data-competition-previous aria-label={id('competitions.previousPage')} {...ariaAttrs(id('competitions.previousPage'), en('competitions.previousPage'))}>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+      </button>
+      <button class="icon-button" type="button" data-competition-next aria-label={id('competitions.nextPage')} {...ariaAttrs(id('competitions.nextPage'), en('competitions.nextPage'))}>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="competition-viewport" data-competition-viewport>
+    <div class="competition-track" data-competition-track style={`--competition-page-count: ${Math.max(1, pages.length)}`}>
+      {pages.map((page, pageIndex) => (
+        <div class="competition-page" data-competition-page data-page-index={pageIndex} role="group" aria-label={id('competitions.page', { index: pageIndex + 1, count: pages.length })} data-aria-id={id('competitions.page', { index: pageIndex + 1, count: pages.length })} data-aria-en={en('competitions.page', { index: pageIndex + 1, count: pages.length })}>
+          {page.map((entry) => {
+            const title = entry.data.copy.id.title;
+            return (
+              <article class="competition-row" data-competition-row data-competition-id={entry.id}>
+                <div class="competition-row__media" data-v6-enter={`competition:${entry.id}:media`} data-v6-preset="competition-media" data-v6-delay="0" data-v6-enter-target=".competition-row__media-visual">
+                  <div class="competition-row__media-visual">
+                    <div class="competition-deck" data-competition-deck data-title-id={entry.data.copy.id.title} data-title-en={entry.data.copy.en.title}>
+                      <div class="competition-photo-stack" data-photo-stack>
+                        {entry.data.photos.map((photo, photoIndex) => (
+                          <img
+                            class="competition-photo-layer"
+                            data-photo-index={photoIndex}
+                            data-current={String(photoIndex === 0)}
+                            src={sitePath(photo.src)}
+                            alt={photoIndex === 0 ? photo.alt.id : ''}
+                            data-alt-id={photo.alt.id}
+                            data-alt-en={photo.alt.en}
+                            aria-hidden={photoIndex === 0 ? undefined : 'true'}
+                            width={photo.width}
+                            height={photo.height}
+                            loading={photoIndex === 0 ? 'lazy' : 'lazy'}
+                            decoding="async"
+                            draggable="false"
+                            style={`--photo-rank: ${photoIndex}`}
+                          />
+                        ))}
+                      </div>
+                      <button class="competition-photo-advance" type="button" data-photo-advance hidden aria-label={id('competitions.photoNext', { title })} {...ariaAttrs(id('competitions.photoNext', { title }), en('competitions.photoNext', { title: entry.data.copy.en.title }))}>
+                        <span class="competition-photo-counter" data-photo-counter aria-hidden="true">1 / {entry.data.photos.length}</span>
+                        <span class="competition-photo-hint" {...copyAttrs(id('competitions.photoHint'), en('competitions.photoHint'))}>{id('competitions.photoHint')}</span>
+                      </button>
+                      <div class="competition-photo-controls" data-photo-controls hidden>
+                        <button class="competition-photo-control" type="button" data-photo-direction="-1" aria-label={id('competitions.photoPrevious', { title })} {...ariaAttrs(id('competitions.photoPrevious', { title }), en('competitions.photoPrevious', { title: entry.data.copy.en.title }))}>
+                          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+                        </button>
+                        <button class="competition-photo-control" type="button" data-photo-direction="1" aria-label={id('competitions.photoNext', { title })} {...ariaAttrs(id('competitions.photoNext', { title }), en('competitions.photoNext', { title: entry.data.copy.en.title }))}>
+                          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+                        </button>
+                      </div>
+                      <span class="competition-photo-status visually-hidden" data-photo-status role="status" aria-live="polite" aria-atomic="true"></span>
+                    </div>
+                  </div>
+                </div>
+                <div class="competition-row__copy" data-v6-enter={`competition:${entry.id}:copy`} data-v6-preset="competition-copy" data-v6-delay="60" data-v6-enter-target=".competition-row__copy-visual">
+                  <div class="competition-row__copy-visual">
+                    <p class="competition-row__eyebrow" {...copyAttrs(entry.data.copy.id.status, entry.data.copy.en.status)}>{entry.data.copy.id.status}</p>
+                    <h3 {...copyAttrs(entry.data.copy.id.title, entry.data.copy.en.title)}>{entry.data.copy.id.title}</h3>
+                    <p class="competition-row__description" {...copyAttrs(entry.data.copy.id.description, entry.data.copy.en.description)}>{entry.data.copy.id.description}</p>
+                    {entry.data.isDummy && <span class="competition-example-badge" {...copyAttrs(id('competitions.exampleBadge'), en('competitions.exampleBadge'))}>{id('competitions.exampleBadge')}</span>}
+                  </div>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      ))}
+    </div>
+  </div>
+</section>

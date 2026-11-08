@@ -1,0 +1,23 @@
+{
+  "order": 10,
+  "draft": false,
+  "isDummy": true,
+  "outcome": "winner",
+  "copy": {
+    "id": {
+      "title": "Contoh kompetisi otomasi",
+      "status": "Contoh — Juara 1",
+      "description": "Contoh aktivitas: menyusun alur kontrol dan menguji urutan kerja sistem."
+    },
+    "en": {
+      "title": "Example automation competition",
+      "status": "Example — 1st place",
+      "description": "Example activity: designing a control sequence and testing the system workflow."
+    }
+  },
+  "photos": [
+    { "src": "assets/placeholders/gggggg.jpg", "width": 1920, "height": 1080, "kind": "placeholder", "alt": { "id": "Ilustrasi contoh kompetisi otomasi, foto 1 dari 3", "en": "Example automation competition illustration, photo 1 of 3" } },
+    { "src": "assets/placeholders/experience-electrical-competition.svg", "width": 1200, "height": 750, "kind": "placeholder", "alt": { "id": "Ilustrasi placeholder otomasi, foto 2 dari 3", "en": "Automation placeholder illustration, photo 2 of 3" } },
+    { "src": "assets/placeholders/skill-control.svg", "width": 1200, "height": 750, "kind": "placeholder", "alt": { "id": "Ilustrasi placeholder sistem kendali, foto 3 dari 3", "en": "Control systems placeholder illustration, photo 3 of 3" } }
+  ]
+}

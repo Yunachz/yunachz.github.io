@@ -211,6 +211,27 @@ const credentialSamples = defineCollection({
   }).strict(),
 });
 
+const competitions = defineCollection({
+  loader: glob({ base: './src/content/competitions', pattern: '**/*.json' }),
+  schema: z.object({
+    order: z.number().int(),
+    draft: z.boolean().default(true),
+    isDummy: z.boolean(),
+    outcome: z.enum(['winner', 'award', 'finalist', 'participant']),
+    copy: z.object({
+      id: z.object({ title: z.string().trim().min(1), status: z.string().trim().min(1), description: z.string().trim().min(1) }).strict(),
+      en: z.object({ title: z.string().trim().min(1), status: z.string().trim().min(1), description: z.string().trim().min(1) }).strict(),
+    }).strict(),
+    photos: z.array(z.object({
+      src: z.string().trim().min(1),
+      width: z.number().int().positive(),
+      height: z.number().int().positive(),
+      kind: z.enum(['photo', 'placeholder']),
+      alt: localizedText,
+    }).strict()).min(1),
+  }).strict(),
+});
+
 const software = defineCollection({
   loader: glob({ base: './src/content/software', pattern: '**/*.json' }),
   schema: z.object({
@@ -222,4 +243,4 @@ const software = defineCollection({
   }).strict(),
 });
 
-export const collections = { projects, site, sections, skills, skillGroups, experience, education, credentials, credentialSamples, software };
+export const collections = { projects, site, sections, skills, skillGroups, experience, education, credentials, credentialSamples, competitions, software };

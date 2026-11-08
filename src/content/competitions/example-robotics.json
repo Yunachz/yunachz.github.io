@@ -1,0 +1,23 @@
+{
+  "order": 30,
+  "draft": false,
+  "isDummy": true,
+  "outcome": "participant",
+  "copy": {
+    "id": {
+      "title": "Contoh kompetisi robotika",
+      "status": "Belum meraih penghargaan — terus berkembang.",
+      "description": "Contoh aktivitas: menguji navigasi prototipe dan mencatat perbaikan untuk percobaan berikutnya."
+    },
+    "en": {
+      "title": "Example robotics competition",
+      "status": "No award this time — keep building.",
+      "description": "Example activity: testing prototype navigation and recording improvements for the next attempt."
+    }
+  },
+  "photos": [
+    { "src": "assets/placeholders/experience-ksm-mekatronika.svg", "width": 1200, "height": 750, "kind": "placeholder", "alt": { "id": "Ilustrasi contoh kompetisi robotika, foto 1 dari 3", "en": "Example robotics competition illustration, photo 1 of 3" } },
+    { "src": "assets/placeholders/skill-control.svg", "width": 1200, "height": 750, "kind": "placeholder", "alt": { "id": "Ilustrasi placeholder navigasi robot, foto 2 dari 3", "en": "Robot navigation placeholder illustration, photo 2 of 3" } },
+    { "src": "assets/placeholders/gggggg.jpg", "width": 1920, "height": 1080, "kind": "placeholder", "alt": { "id": "Ilustrasi placeholder prototipe robot, foto 3 dari 3", "en": "Robot prototype placeholder illustration, photo 3 of 3" } }
+  ]
+}

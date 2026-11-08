@@ -1,0 +1,23 @@
+{
+  "order": 20,
+  "draft": false,
+  "isDummy": true,
+  "outcome": "award",
+  "copy": {
+    "id": {
+      "title": "Contoh tantangan IoT",
+      "status": "Contoh — Penghargaan ide",
+      "description": "Contoh aktivitas: merancang pemantauan sensor dan menjelaskan hasil pengujian."
+    },
+    "en": {
+      "title": "Example IoT challenge",
+      "status": "Example — Idea award",
+      "description": "Example activity: planning sensor monitoring and presenting test results."
+    }
+  },
+  "photos": [
+    { "src": "assets/placeholders/experience-ksm-iot.svg", "width": 1200, "height": 750, "kind": "placeholder", "alt": { "id": "Ilustrasi contoh tantangan IoT, foto 1 dari 3", "en": "Example IoT challenge illustration, photo 1 of 3" } },
+    { "src": "assets/placeholders/gggggg.jpg", "width": 1920, "height": 1080, "kind": "placeholder", "alt": { "id": "Ilustrasi placeholder IoT, foto 2 dari 3", "en": "IoT placeholder illustration, photo 2 of 3" } },
+    { "src": "assets/placeholders/experience-electrical-competition.svg", "width": 1200, "height": 750, "kind": "placeholder", "alt": { "id": "Ilustrasi placeholder kompetisi teknik, foto 3 dari 3", "en": "Engineering competition placeholder illustration, photo 3 of 3" } }
+  ]
+}
