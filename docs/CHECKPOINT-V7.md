@@ -1,6 +1,12 @@
 # CHECKPOINT V7 — current handover
 
-## Publication authorized — 2026-11-08
+## Public release complete — 2026-11-08
+
+V7 is deployed at [https://yunachz.github.io/](https://yunachz.github.io/). The source-bearing commit is 6639a2ca06fc248d90e2292efe15838f03c1557a; GitHub Pages workflow [run 42458703729](https://github.com/Yunachz/yunachz.github.io/actions/runs/42458703729) completed successfully for that SHA. Focused public verification passed: HTTPS 200, deployed HTML/artifact identity, all 12 bundle hashes, four labelled dummy records with 3+1 paging and photo decks, full-width About grid/name without a local pause, both hero CTAs, eight GlareHover slots, certificate viewer, and zero browser console errors.
+
+See [V7-RELEASE.md](./V7-RELEASE.md) for artifact hashes, the three-byte Astro island uid variance, smoke evidence, screenshots, workflow details, and limits. A documentation-only follow-up records release status; public V7 source remains the source-bearing commit above. Sections below preserve pre-release checkpoints. Their unpublished/pending language is historical and superseded by this release record.
+
+## Publication authorization — pre-release context, 2026-11-08
 
 Release task `task_e8401942c6c9` is dispatched to Codex GPT-6 Luna max as `ctx_c77684eb40c9`, terminal `term_372a033b-547f-4fd4-af6b-14b7c5349243`, in the current workspace. Start receipt: ready. Await its release evidence through Orca; do not start a competing release worker.
 
@@ -14,7 +20,7 @@ Accepted frozen HTML: `.checkpoints/v7-implementation-2026-11-06/frozen-preview-
 
 Implementer `task_f78375cc46ca` succeeded. Designer `task_436071e4fb6c` and follow-up `task_367202f4e5c4` passed. The coordinator's later allegation of mislabeled About screenshots was mistaken and withdrawn after opening the files individually; no product fix is needed. Final follow-up `task_e87663d77b48` / `ctx_15e4088624d8` succeeded (`msg_b2b4f6bc447a`) with isolated evidence in `visual-revision-isolated-1794120411304/` and a conditional verdict awaiting coordinator inspection. Coordinator inspected the saved About image and resolved that condition: local PASS remains. All requested design review tasks are settled; do not restart implementation or capture suites.
 
-No V7 staging, commit, push or deployment has occurred. Next: publication decision on this accepted candidate, then explicit scoped staging/commit, deployment and public verification. Preserve all history; never reset, clean or broad-stage. Hardware GPU performance remains unverified (SwiftShader QA); existing 543,853-byte Lanyard bundle advisory remains.
+At the time this local acceptance was recorded, no V7 staging, commit, push or deployment had occurred. The release section above supersedes that pre-release state. Hardware GPU performance remains unverified (SwiftShader QA); the existing 543,853-byte Lanyard bundle advisory remains.
 
 Final designer correction completed as PASS: `msg_abe127cc0619`, task `task_b2faefa45130`, dispatch `ctx_e5239d8e0bb1`. The reviewer acknowledged the coordinator correction and finalized `V7-FINAL-DESIGN-REVIEW.md`. Earlier mail-delivery escalation was resolved by that acknowledgment and completion; no recovery or further review is needed.
 

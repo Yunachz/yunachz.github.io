@@ -1,6 +1,14 @@
 # V7 QA
 
-Status: **current-source QA complete; designer review and local coordinator acceptance PASS**. See [V7-COORDINATOR-ACCEPTANCE.md](./V7-COORDINATOR-ACCEPTANCE.md). The frozen bytes and historical evidence remain preserved under `.checkpoints/v7-implementation-2026-11-06/`; no release or deployment occurred. Earlier pending/failing statuses below are historical and superseded by the final current-source results and acceptance record.
+Status: **current-source QA, designer review, local coordinator acceptance, and public release verification PASS**. Source commit 6639a2ca06fc248d90e2292efe15838f03c1557a deployed through [Pages run 42458703729](https://github.com/Yunachz/yunachz.github.io/actions/runs/42458703729) to [yunachz.github.io](https://yunachz.github.io/). See [V7-RELEASE.md](./V7-RELEASE.md) for public artifact identity and smoke evidence. Older pre-release statuses below are retained as history.
+
+## Public release verification — 2026-11-08
+
+- Public HTTPS root returned 200. The public response exactly matched the successful Pages workflow artifact.
+- Local build HTML remained byte-identical to the accepted preview manifest. Workflow/public HTML differed by three bytes only in two Astro island uid values; replacing those generated values made the files byte-identical. All 12 emitted JS/CSS bundles matched the manifest, build, artifact, and public responses.
+- Focused public smoke passed About full-width grid/name and no pause control; CV and Projects CTAs; four labelled dummy competitions with 3+1 pages and advancing photo deck; eight mounted GlareHover slots; certificate viewer; and zero console errors.
+- [Public smoke JSON and screenshots](../.checkpoints/v7-implementation-2026-11-06/release-v7-2026-11-08/public-smoke/) record the checks. The first failed harness attempt is preserved separately in public-smoke-initial-failure/.
+- Browser used ANGLE SwiftShader. Hardware GPU performance remains unverified; the 543,853-byte Lanyard chunk advisory remains.
 
 ## Final current-source QA — 2026-11-08
 

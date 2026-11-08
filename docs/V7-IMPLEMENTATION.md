@@ -1,14 +1,18 @@
 # V7 Implementation
 
-Status: **implementation and current-source QA complete; independent designer review and local coordinator gate PASS**. See [V7-COORDINATOR-ACCEPTANCE.md](./V7-COORDINATOR-ACCEPTANCE.md) for the current acceptance; older pending review statements below are historical. The earlier frozen preview remains preserved. The accepted candidate is `.checkpoints/v7-implementation-2026-11-06/frozen-preview-v7-2026-11-08-1794116450700/index.html`; its manifest and final QA results are in [V7-QA.md](./V7-QA.md). No staging, commit, push, or deployment occurred.
+Status: **implementation, current-source QA, designer review, and local coordinator acceptance PASS; released publicly on 2026-11-08**. Source commit 6639a2ca06fc248d90e2292efe15838f03c1557a deployed through [Pages run 42458703729](https://github.com/Yunachz/yunachz.github.io/actions/runs/42458703729) to [yunachz.github.io](https://yunachz.github.io/). See [V7-RELEASE.md](./V7-RELEASE.md) for public verification. Older pending statements below describe pre-release checkpoints.
 
-## Frozen preview milestone — 2026-11-08
+## Public release — 2026-11-08
+
+The released source is commit 6639a2ca06fc248d90e2292efe15838f03c1557a. The successful Pages artifact and public root matched at 146,524 bytes and SHA-256 2bafa5fadddcda02067f56d2f0f4e0b01bbb85a47587edea5902ee7325601c3c. The accepted local build remains 146,521 bytes with SHA-256 638cf795930085b1b539d20faf1eb2e1de5d963028a58297b8c85fa777722e4e; the only variance is the two generated Astro island uid values, totaling three bytes. The complete focused public smoke passed with no console errors. See [the release record](./V7-RELEASE.md) and its linked evidence.
+
+## Frozen preview milestone — pre-release status, 2026-11-08
 
 Current-source content validation, all 52 tests, check, production build, diff whitespace check, focused native browser suites, and V6 regression suites passed. The preview HTML is 146,521 bytes with SHA-256 `638cf795930085b1b539d20faf1eb2e1de5d963028a58297b8c85fa777722e4e`; it matches `dist/index.html`. The durable manifest `../.checkpoints/v7-implementation-2026-11-06/preview-sha256-manifest-v7-2026-11-08-1794116450700.json` records all 12 emitted JS/CSS bundles. The largest existing shared Lanyard bundle is 543,853 bytes, above Vite's 500 kB advisory threshold; the Glare enhancement chunk is 8,177 bytes. No package dependency was added.
 
 The eight-slot native Glare lifecycle passed. The earlier failure report remains untouched: its real first-entry sweep crossed from −159.82 to +177.49 px between samples 301 ms apart, so it missed the harness's narrow single-sample window despite active, visible animation. The revised durable harness accepts a bounded sign crossing between active samples without changing product logic. UI and visual-revision suites passed at desktop, tablet, and narrow widths in both themes/locales; focused V6 regressions passed. Browser rendering used ANGLE SwiftShader, so evidence establishes software-rendered browser behavior, not hardware GPU performance. The four approved dummy competition IDs remain in source and tests. The user's later revision removed the About local pause control; it remains absent.
 
-Independent designer preview review and coordinator acceptance remain the only milestone gates. Preview is local and frozen; it has not been deployed.
+At this pre-release milestone, independent designer review and coordinator acceptance were the remaining gates and the preview was still local. Both gates and deployment are now complete; see the release status above.
 
 ## Latest implementation checkpoint — 2026-11-08
 
